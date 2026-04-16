@@ -1,0 +1,194 @@
+/* ── Check-In (public-facing) ── */
+
+.checkin-page {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 40px var(--space-lg) var(--space-2xl);
+  animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+.checkin-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-lg);
+  letter-spacing: -0.02em;
+}
+
+/* ── Form fields ── */
+.checkin-field {
+  margin-bottom: var(--space-md);
+}
+
+.checkin-label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.checkin-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: var(--font-body);
+  font-weight: 400;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.2s var(--ease-out);
+}
+
+.checkin-input::placeholder {
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+.checkin-input:focus {
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.checkin-select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a39e95'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.checkin-select:focus {
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* ── Category tags ── */
+.checkin-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkin-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.checkin-tag input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+/* ── Photo upload ── */
+.checkin-file-input {
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--text-secondary);
+}
+
+.checkin-photo-preview {
+  margin-top: var(--space-sm);
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+}
+
+/* ── Error ── */
+.checkin-error {
+  color: #a83030;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: var(--space-md);
+  padding: 12px 14px;
+  background: #fdeeee;
+  border: 1px solid #f0c8c8;
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+
+/* ── Submit ── */
+.checkin-submit {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  letter-spacing: 0.02em;
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-top: var(--space-sm);
+  transition: all 0.2s var(--ease-out);
+}
+
+.checkin-submit:hover {
+  background: var(--accent);
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.checkin-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkin-submit:disabled:hover {
+  background: var(--text-primary);
+  box-shadow: none;
+}
+
+/* ── Confirmation screen ── */
+.checkin-done {
+  text-align: center;
+  padding: 80px var(--space-lg);
+  animation: fadeUp 0.5s var(--ease-out) both;
+}
+
+.checkin-done-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: var(--space-lg);
+  border: 3px solid var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+.checkin-done h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm);
+}
+
+.checkin-done-name {
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--text-secondary);
+}

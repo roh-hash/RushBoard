@@ -1,0 +1,332 @@
+/* ── Rushee Profile ── */
+
+.profile-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: var(--space-lg);
+  animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+.profile-loading {
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+  text-align: center;
+  font-weight: 300;
+}
+
+/* ── Back button ── */
+.profile-back {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s var(--ease-out);
+}
+
+.profile-back:hover {
+  color: var(--accent);
+}
+
+/* ── Header ── */
+.profile-header {
+  display: flex;
+  gap: 20px;
+  margin-top: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border-subtle);
+}
+
+.profile-avatar-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.profile-name {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+  letter-spacing: -0.02em;
+}
+
+.profile-hometown {
+  color: var(--text-secondary);
+  font-weight: 300;
+  font-size: 15px;
+}
+
+.profile-year {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.profile-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 6px;
+}
+
+.profile-nights {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  font-weight: 400;
+}
+
+/* ── Sections ── */
+.profile-section {
+  margin-bottom: var(--space-xl);
+}
+
+.profile-section-title {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* ── Star rating ── */
+.profile-stars {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.profile-star {
+  background: none;
+  border: none;
+  font-size: 30px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: transform 0.15s var(--ease-out);
+}
+
+.profile-star:hover {
+  transform: scale(1.15);
+}
+
+.profile-star--filled {
+  color: var(--accent);
+}
+
+.profile-star--empty {
+  color: var(--border-medium);
+}
+
+.profile-my-score {
+  margin-left: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 400;
+  align-self: center;
+}
+
+/* ── Talked-to checkbox ── */
+.profile-talked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.profile-talked input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+/* ── Bid status ── */
+.profile-bid-row {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-bid-btn {
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+  transition: all 0.2s var(--ease-out);
+  background: var(--bg-card);
+  color: var(--text-tertiary);
+}
+
+.profile-bid-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.profile-bid-btn--bid-active {
+  background: #edf7ed;
+  border-color: #5a9e5a;
+  color: #2e6e2e;
+}
+
+.profile-bid-btn--table-active {
+  background: #fef8ec;
+  border-color: #d4960a;
+  color: #8a6200;
+}
+
+.profile-bid-btn--fade-active {
+  background: #fdeeee;
+  border-color: #d45050;
+  color: #a83030;
+}
+
+/* ── Comments ── */
+.profile-comment-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: var(--space-md);
+}
+
+.profile-comment-input {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: all 0.2s var(--ease-out);
+}
+
+.profile-comment-input::placeholder {
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+.profile-comment-input:focus {
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.profile-comment-post {
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+  white-space: nowrap;
+}
+
+.profile-comment-post:hover {
+  background: var(--accent);
+}
+
+.profile-comment-post:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.profile-comment {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.profile-comment-author {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.profile-comment-text {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.profile-comment-time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  font-weight: 300;
+}
+
+.profile-empty {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 300;
+  font-style: italic;
+}
+
+/* ── All ratings list ── */
+.profile-rating-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.profile-rating-member {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.profile-rating-stars {
+  font-size: 14px;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.profile-rating-stars-empty {
+  color: var(--border-medium);
+}

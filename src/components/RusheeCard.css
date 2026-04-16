@@ -1,0 +1,152 @@
+/* ── Rushee Card ── */
+/* Designed to feel like a posted portrait — tactile, warm, slightly elevated */
+
+.rushee-card {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out);
+}
+
+.rushee-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-lg);
+}
+
+.rushee-card:active {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Photo ── */
+.rushee-photo-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.rushee-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s var(--ease-out);
+}
+
+.rushee-card:hover .rushee-photo {
+  transform: scale(1.05);
+}
+
+
+/* Placeholder initial */
+.rushee-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  letter-spacing: -0.02em;
+}
+
+/* ── Card body ── */
+.rushee-info {
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  position: relative;
+  margin-top: 0;
+}
+
+.rushee-name {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.rushee-hometown {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Meta row ── */
+.rushee-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.rushee-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.6;
+}
+
+.rushee-nights {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* ── Rating ── */
+.rushee-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.rushee-rating-star {
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.rushee-rating-value {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.rushee-rating-count {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 300;
+}
+
+.rushee-no-rating {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+  font-style: italic;
+}

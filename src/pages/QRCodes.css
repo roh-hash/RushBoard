@@ -1,0 +1,245 @@
+/* ── QR Codes ── */
+
+.qr-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: var(--space-lg);
+  animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+.qr-back {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s var(--ease-out);
+}
+
+.qr-back:hover {
+  color: var(--accent);
+}
+
+.qr-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-lg);
+  letter-spacing: -0.02em;
+}
+
+/* ── Create button ── */
+.qr-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-full);
+  background: var(--accent-dim);
+  color: var(--accent);
+  margin-bottom: var(--space-lg);
+  transition: all 0.2s var(--ease-out);
+}
+
+.qr-create-btn:hover {
+  background: var(--accent);
+  color: var(--text-inverse);
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+/* ── Create form ── */
+.qr-create-form {
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.qr-create-field {
+  margin-bottom: var(--space-md);
+}
+
+.qr-create-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.2s var(--ease-out);
+}
+
+.qr-create-input::placeholder {
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+.qr-create-input:focus {
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.qr-create-error {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: var(--space-sm);
+}
+
+.qr-create-submit {
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.qr-create-submit:hover {
+  background: var(--accent);
+}
+
+.qr-create-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Night cards ── */
+.qr-night-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s var(--ease-out);
+}
+
+.qr-night-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.qr-night-layout {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.qr-night-canvas canvas {
+  border-radius: var(--radius-sm);
+}
+
+.qr-night-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.qr-night-label {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.qr-night-creator {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-md);
+  font-weight: 300;
+}
+
+.qr-night-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Link rows ── */
+.qr-link-row {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.qr-link-label {
+  font-weight: 600;
+}
+
+.qr-link-url {
+  color: var(--text-secondary);
+  word-break: break-all;
+  font-weight: 300;
+}
+
+.qr-link-copy {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  padding: 3px 10px;
+  cursor: pointer;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  margin-left: 6px;
+  transition: all 0.15s var(--ease-out);
+}
+
+.qr-link-copy:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Download button ── */
+.qr-download {
+  margin-top: var(--space-md);
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all 0.15s var(--ease-out);
+}
+
+.qr-download:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* ── Empty state ── */
+.qr-empty {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  font-weight: 300;
+  text-align: center;
+  padding: var(--space-xl) 0;
+}

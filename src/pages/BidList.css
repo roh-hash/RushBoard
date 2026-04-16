@@ -1,0 +1,287 @@
+/* ── Bid List (Kanban) ── */
+
+.bidlist-page {
+  padding: var(--space-lg);
+  max-width: 1000px;
+  margin: 0 auto;
+  animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+.bidlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.bidlist-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.bidlist-nav {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.bidlist-nav-btn {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all 0.2s var(--ease-out);
+}
+
+.bidlist-nav-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+/* ── Uncategorized section ── */
+.bidlist-uncat {
+  margin-bottom: var(--space-xl);
+}
+
+.bidlist-uncat-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-sm);
+}
+
+.bidlist-uncat-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Kanban columns ── */
+.bidlist-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+@media (max-width: 640px) {
+  .bidlist-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bidlist-column {
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  min-height: 200px;
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.2s var(--ease-out);
+}
+
+.bidlist-column:hover {
+  border-color: var(--border-medium);
+}
+
+.bidlist-col--bid {
+  background: #f5faf5;
+}
+
+.bidlist-col--table {
+  background: #fdf8ef;
+}
+
+.bidlist-col--fade {
+  background: #fcf2f2;
+}
+
+.bidlist-col-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-md);
+}
+
+.bidlist-col-empty {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+  font-weight: 300;
+  font-style: italic;
+}
+
+/* ── Mini card wrapper (holds card + assign menu) ── */
+.bidlist-mini-wrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+/* ── Mini card (draggable) ── */
+.bidlist-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s var(--ease-out);
+}
+
+.bidlist-mini:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-medium);
+}
+
+.bidlist-mini:active {
+  cursor: grabbing;
+  box-shadow: var(--shadow-lg);
+}
+
+.bidlist-mini-photo {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bidlist-mini-photo-placeholder {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.bidlist-mini-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bidlist-mini-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bidlist-mini-rating {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* ── Tap-to-assign button (three dots) ── */
+.bidlist-mini-assign {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+  flex-shrink: 0;
+  letter-spacing: 1px;
+  transition: color 0.15s var(--ease-out);
+}
+
+.bidlist-mini-assign:hover {
+  color: var(--accent);
+}
+
+.bidlist-mini-remove {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+
+.bidlist-mini-remove:hover {
+  color: var(--accent);
+}
+
+/* ── Assign dropdown menu ── */
+.bidlist-assign-menu {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  animation: fadeUp 0.15s var(--ease-out) both;
+}
+
+.bidlist-assign-opt {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s var(--ease-out);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+.bidlist-assign-opt--bid {
+  border-color: #5a9e5a;
+  color: #2e6e2e;
+}
+
+.bidlist-assign-opt--bid:hover {
+  background: #edf7ed;
+}
+
+.bidlist-assign-opt--table {
+  border-color: #d4960a;
+  color: #8a6200;
+}
+
+.bidlist-assign-opt--table:hover {
+  background: #fef8ec;
+}
+
+.bidlist-assign-opt--fade {
+  border-color: #d45050;
+  color: #a83030;
+}
+
+.bidlist-assign-opt--fade:hover {
+  background: #fdeeee;
+}
