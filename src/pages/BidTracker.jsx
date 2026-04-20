@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRushees } from '../hooks/useRushees';
-import { useAuth } from '../hooks/useAuth';
 import { setCallStatus } from '../lib/firebase';
+import { useChapterContext } from '../hooks/useChapter';
+import { useRushees } from '../hooks/useRushees';
 import './BidTracker.css';
 
 const RESPONSES = [
@@ -12,21 +12,31 @@ const RESPONSES = [
 ];
 
 export default function BidTracker() {
-  const { rushees, loading } = useRushees();
-  const { memberName } = useAuth();
   const navigate = useNavigate();
+  const { chapter, membership } = useChapterContext();
+  const { rushees, loading } = useRushees(chapter?.id);
 
   const bidRushees = useMemo(
-    () => rushees.filter((r) => r.bidStatus === 'bid'),
+    () => rushees.filter((rushee) => rushee.bidStatus === 'bid'),
     [rushees],
   );
 
   function handleCalledChange(rushee) {
-    setCallStatus(rushee.id, { called: !rushee.called, response: rushee.callResponse || '' }, memberName);
+    setCallStatus(
+      chapter.id,
+      rushee.id,
+      { called: !rushee.called, response: rushee.callResponse || '' },
+      membership,
+    );
   }
 
   function handleResponseChange(rushee, response) {
-    setCallStatus(rushee.id, { called: rushee.called ?? false, response }, memberName);
+    setCallStatus(
+      chapter.id,
+      rushee.id,
+      { called: rushee.called ?? false, response },
+      membership,
+    );
   }
 
   if (loading) {
@@ -35,10 +45,11 @@ export default function BidTracker() {
 
   return (
     <div className="tracker-page">
+      <p className="tracker-kicker">{chapter.displayName} Rush</p>
       <h1 className="tracker-title">Bid Tracker</h1>
       <div className="tracker-nav">
-        <button onClick={() => navigate('/dashboard')} className="tracker-nav-btn">Dashboard</button>
-        <button onClick={() => navigate('/bids')} className="tracker-nav-btn">Bid List</button>
+        <button onClick={() => navigate(`/${chapter.slug}/dashboard`)} className="tracker-nav-btn">Dashboard</button>
+        <button onClick={() => navigate(`/${chapter.slug}/bids`)} className="tracker-nav-btn">Bid List</button>
       </div>
       <p className="tracker-count">
         {bidRushees.length} rushee{bidRushees.length !== 1 ? 's' : ''} with a bid
@@ -47,38 +58,38 @@ export default function BidTracker() {
       {bidRushees.length === 0 ? (
         <p className="tracker-empty">No rushees in the Bid column yet.</p>
       ) : (
-        bidRushees.map((r) => (
-          <div key={r.id} className="tracker-row">
-            {r.photoURL ? (
-              <img src={r.photoURL} alt="" className="tracker-photo" />
+        bidRushees.map((rushee) => (
+          <div key={rushee.id} className="tracker-row">
+            {rushee.photoURL ? (
+              <img src={rushee.photoURL} alt="" className="tracker-photo" />
             ) : (
               <div className="tracker-photo-placeholder">
-                {r.displayName?.[0]?.toUpperCase() || '?'}
+                {rushee.displayName?.[0]?.toUpperCase() || '?'}
               </div>
             )}
 
             <div className="tracker-info">
-              <div className="tracker-name">{r.displayName}</div>
-              <div className="tracker-phone">{r.phone || 'No phone'}</div>
+              <div className="tracker-name">{rushee.displayName}</div>
+              <div className="tracker-phone">{rushee.phone || 'No phone'}</div>
             </div>
 
             <label className="tracker-called">
               <input
                 type="checkbox"
-                checked={!!r.called}
-                onChange={() => handleCalledChange(r)}
+                checked={!!rushee.called}
+                onChange={() => handleCalledChange(rushee)}
               />
               <span className="tracker-called-label">Called</span>
             </label>
 
             <div className="tracker-responses">
-              {RESPONSES.map((opt) => (
+              {RESPONSES.map((option) => (
                 <button
-                  key={opt.value}
-                  onClick={() => handleResponseChange(r, opt.value)}
-                  className={`tracker-response-btn ${r.callResponse === opt.value ? `tracker-response-btn--${opt.value}-active` : ''}`}
+                  key={option.value}
+                  onClick={() => handleResponseChange(rushee, option.value)}
+                  className={`tracker-response-btn ${rushee.callResponse === option.value ? `tracker-response-btn--${option.value}-active` : ''}`}
                 >
-                  {opt.label}
+                  {option.label}
                 </button>
               ))}
             </div>

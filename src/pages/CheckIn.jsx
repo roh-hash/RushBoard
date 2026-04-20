@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import imageCompression from 'browser-image-compression';
-import { createRushee, uploadRusheePhoto } from '../lib/firebase';
+import { DEFAULT_RUSHEE_TAGS, getRushNight, submitRusheeCheckIn } from '../lib/firebase';
+import { useChapterContext } from '../hooks/useChapter';
 import './CheckIn.css';
 
-const YEAR_OPTIONS = ['Freshman', 'Sophomore'];
-const CATEGORIES = ['Legacy', 'DJ', 'Biker', 'Hooper'];
+const YEAR_OPTIONS = ['Freshman', 'Sophomore', 'Other'];
 
 export default function CheckIn() {
   const { nightId } = useParams();
+  const { chapter, settings } = useChapterContext();
+  const [night, setNight] = useState(null);
+  const [nightLoading, setNightLoading] = useState(true);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -23,19 +26,46 @@ export default function CheckIn() {
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
 
+  const tagOptions = useMemo(
+    () => settings?.rusheeTags?.length ? settings.rusheeTags : DEFAULT_RUSHEE_TAGS,
+    [settings?.rusheeTags],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNight() {
+      if (!chapter?.id) return;
+      const nextNight = await getRushNight(chapter.id, nightId);
+      if (!cancelled) {
+        setNight(nextNight);
+        setNightLoading(false);
+      }
+    }
+
+    loadNight();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chapter?.id, nightId]);
+
   function updateField(field) {
-    return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+    return (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
   }
 
   function toggleTag(tag) {
-    setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+    setTags((current) => (
+      current.includes(tag)
+        ? current.filter((entry) => entry !== tag)
+        : [...current, tag]
+    ));
   }
 
-  async function handlePhoto(e) {
-    const file = e.target.files?.[0];
+  async function handlePhoto(event) {
+    const file = event.target.files?.[0];
     if (!file) return;
+
     try {
       const compressed = await imageCompression(file, {
         maxSizeMB: 0.2,
@@ -45,12 +75,12 @@ export default function CheckIn() {
       setPhoto(compressed);
       setPreview(URL.createObjectURL(compressed));
     } catch {
-      setError('Could not process photo. Try another.');
+      setError('Could not process that photo. Try a different one.');
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
     setError('');
 
     if (!form.firstName.trim() || !form.lastName.trim()) {
@@ -58,46 +88,61 @@ export default function CheckIn() {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      let photoURL = '';
-      if (photo) {
-        const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        photoURL = await uploadRusheePhoto(photo, tempId);
-      }
+    if (!chapter?.id) {
+      setError('This chapter could not be loaded.');
+      return;
+    }
 
-      await createRushee({
-        ...form,
-        tag: tags.join(', '),
-        photoURL,
+    setSubmitting(true);
+
+    try {
+      const result = await submitRusheeCheckIn({
+        chapterId: chapter.id,
         nightId,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone,
+        hometown: form.hometown,
+        year: form.year,
+        tags,
+        photo,
       });
 
       setDone({
-        name: `${form.firstName.trim()} ${form.lastName.trim()}`,
-        photoURL,
+        name: result.displayName,
+        photoURL: result.photoURL,
+        created: result.created,
       });
     } catch (err) {
-      console.error(err);
       if (!navigator.onLine) {
-        setError('You appear to be offline. Connect to Wi-Fi and try again.');
-      } else if (err?.code === 'storage/unauthorized' || err?.code === 'permission-denied') {
-        setError('Check-in is temporarily unavailable. Ask a member for help.');
+        setError('You appear to be offline. Connect to the internet and try again.');
       } else {
-        setError('Something went wrong. Check your connection and try again.');
+        setError(err?.message || 'Something went wrong. Please try again.');
       }
     } finally {
       setSubmitting(false);
     }
   }
 
+  if (nightLoading) {
+    return <div className="checkin-page"><p>Loading check-in...</p></div>;
+  }
+
+  if (!chapter || !night?.isActive) {
+    return (
+      <div className="checkin-page">
+        <h1 className="checkin-title">Check-in unavailable</h1>
+        <p className="checkin-copy">This rush night link is not active anymore.</p>
+      </div>
+    );
+  }
+
   if (done) {
     return (
       <div className="checkin-done">
-        {done.photoURL && (
-          <img src={done.photoURL} alt={done.name} className="checkin-done-photo" />
-        )}
-        <h1>You're checked in!</h1>
+        {done.photoURL && <img src={done.photoURL} alt={done.name} className="checkin-done-photo" />}
+        <p className="checkin-kicker">{chapter.displayName} Rush</p>
+        <h1>{done.created ? "You're checked in!" : "You're already on the board!"}</h1>
         <p className="checkin-done-name">{done.name}</p>
       </div>
     );
@@ -105,7 +150,10 @@ export default function CheckIn() {
 
   return (
     <div className="checkin-page">
-      <h1 className="checkin-title">Rush Check-In</h1>
+      <p className="checkin-kicker">{chapter.displayName} Rush</p>
+      <h1 className="checkin-title">{night.label}</h1>
+      <p className="checkin-copy">Fill this out once and your chapter roster updates live for everyone inside RushBoard.</p>
+
       <form onSubmit={handleSubmit}>
         <div className="checkin-field">
           <label className="checkin-label">First name *</label>
@@ -127,20 +175,20 @@ export default function CheckIn() {
           <label className="checkin-label">Year</label>
           <select value={form.year} onChange={updateField('year')} className="checkin-select">
             <option value="">Select</option>
-            {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+            {YEAR_OPTIONS.map((year) => <option key={year} value={year}>{year}</option>)}
           </select>
         </div>
         <div className="checkin-field">
-          <label className="checkin-label">Categories</label>
+          <label className="checkin-label">Tags</label>
           <div className="checkin-tags">
-            {CATEGORIES.map((cat) => (
-              <label key={cat} className="checkin-tag">
+            {tagOptions.map((tag) => (
+              <label key={tag} className="checkin-tag">
                 <input
                   type="checkbox"
-                  checked={tags.includes(cat)}
-                  onChange={() => toggleTag(cat)}
+                  checked={tags.includes(tag)}
+                  onChange={() => toggleTag(tag)}
                 />
-                {cat}
+                {tag}
               </label>
             ))}
           </div>
@@ -148,9 +196,7 @@ export default function CheckIn() {
         <div className="checkin-field">
           <label className="checkin-label">Selfie</label>
           <input type="file" accept="image/*" capture="user" onChange={handlePhoto} className="checkin-file-input" />
-          {preview && (
-            <img src={preview} alt="Preview" className="checkin-photo-preview" />
-          )}
+          {preview && <img src={preview} alt="Preview" className="checkin-photo-preview" />}
         </div>
 
         {error && <p className="checkin-error">{error}</p>}

@@ -4,9 +4,9 @@ Running log of project state. Read this at the start of every session. Update it
 
 ## Current status
 
-**Phase:** MVP feature-complete.
-**Last session:** All 6 MVP features built and working.
-**Next up:** Netlify deploy, then end-to-end testing on mobile.
+**Phase:** Bug-fix pass complete. Ready for Firebase console config + end-to-end testing.
+**Last session:** Audited entire codebase, fixed critical bugs, security issues, and stale docs.
+**Next up:** Configure Firebase console/auth domains/rules for the new flow, then run full end-to-end testing with real email links and invite flows.
 
 ## MVP checklist
 
@@ -21,19 +21,18 @@ Work these in order. Check items off as completed. Don't skip ahead.
 - [ ] Netlify deploy working from `main` branch
 
 ### Auth + Login
-- [x] Login page: passcode + name inputs
-- [x] Store passcode hash in env var, compare client-side (MVP only — revisit)
-- [x] Persist `{ memberName, loggedInAt }` in localStorage
-- [x] Redirect to `/dashboard` on success, back to `/` on logout
-- [x] Show member name in dashboard header
+- [x] Replace passcode login with Firebase email-link sign-in
+- [x] Persist auth with Firebase Auth instead of localStorage-only passcodes
+- [x] Redirect signed-in users to their chapter dashboard
+- [x] Show active member name in dashboard header
 
 ### Rushee check-in
-- [x] Public route `/checkin/:nightId`
+- [x] Public route `/:chapterSlug/checkin/:nightId`
 - [x] Form: name, hometown, phone, major, year, identity tag, selfie
 - [x] Client-side image compression (target <200KB)
 - [x] Upload photo to Firebase Storage
-- [x] Write rushee doc to Firestore with `nightId` in `attendedNights` array
-- [x] Duplicate detection by name OR phone — if match, append night instead of creating
+- [x] Write rushee doc under chapter-scoped Firestore path with `nightId` in `attendedNights` array
+- [x] Duplicate detection by name OR phone inside the same chapter
 - [x] Confirmation screen with photo + name
 
 ### Dashboard roster
@@ -41,19 +40,20 @@ Work these in order. Check items off as completed. Don't skip ahead.
 - [x] Card shows: photo, name, hometown, tag badge, avg score, rating count, night count
 - [x] Default sort: avg rating high to low
 - [x] Search by name
-- [x] Tap card → rushee profile page
+- [x] Tap card → chapter-scoped rushee profile page
+- [x] Dashboard header uses fraternity + chapter name + "Rush"
 
 ### Rushee profile
 - [x] Full details view
-- [x] Star rating (1–5), stored as separate `ratings` subcollection doc per member
+- [x] Star rating (1–5), stored as separate `ratings` subcollection doc keyed by member uid
 - [x] Comment section — each comment shows member name + timestamp
-- [x] "Talked to them" toggle per member
+- [x] "Talked to them" toggle keyed by member uid
 - [x] List of all ratings with member names + scores, most recent first
 
 ### QR codes page
-- [x] View list of existing rush night QRs (any member)
-- [x] Generate new QR — prompts for rush chair PIN
-- [x] Each QR links to `/checkin/:nightId`
+- [x] View list of existing rush night QRs (rush-chair-only route)
+- [x] Generate new QR for the active chapter
+- [x] Each QR links to `/:chapterSlug/checkin/:nightId`
 - [x] Display two shareable links (dashboard + check-in) with copy buttons
 - [x] Download QR as PNG
 
@@ -61,6 +61,14 @@ Work these in order. Check items off as completed. Don't skip ahead.
 - [x] Kanban board: Bid / Watch List / Pass columns
 - [x] Drag-drop rushees between columns (live-updating)
 - [x] Log `{ memberName, timestamp, movedTo }` on every move
+
+### Chapters + Settings
+- [x] `Start using RushBoard` launches chapter onboarding
+- [x] Create chapter with fraternity name + charter name + initial rush chair
+- [x] Add chapter-scoped routes and chapter lookup by slug
+- [x] Add chapter settings page for rushee tags and invite links
+- [x] Add member/rush-chair invite flow by email link
+- [x] Add Firebase rules/config scaffolding files for chapter model
 
 ## Deferred (post-MVP)
 
@@ -105,3 +113,22 @@ Append a short entry each session. Format:
 - Each login page has a back button to home page.
 - Build passes without errors.
 - Next session starts with: Test home page and login flow.
+
+### 2026-04-16 — Refactored RushBoard into a chapter-scoped app
+- Replaced shared passcode auth with Firebase email-link auth and membership lookup via Firestore.
+- Moved the app to chapter-scoped routes and Firestore collections, added onboarding, invites, settings, and chapter-branded dashboard/check-in flows.
+- Added Firebase rules/config scaffolding (`firebase.json`, `firestore.rules`, `storage.rules`) to match the new multi-tenant structure.
+- Build and lint pass locally; real email-link onboarding still needs Firebase console configuration and end-to-end validation.
+- Next session starts with: wire the Firebase console settings/auth domains, then test onboarding, invite acceptance, and public check-in against a live project.
+
+### 2026-04-16 — Codebase audit and bug fixes
+- Fixed crash: JoinChapter route was missing ChapterProvider wrapper (PublicChapterRoute).
+- Fixed crash: FinishSignIn useEffect re-fired on every keystroke due to `email` in deps; rewrote to use explicit submit.
+- Security: tightened invite update rule to require matching email, not just any signed-in user.
+- Security: clipboard.writeText calls now have .catch() for non-HTTPS/permission-denied contexts.
+- Fixed: setBidStatus, clearBidStatus, setCallStatus now use serverTimestamp() instead of client Date.
+- Fixed: recalcAvgRating now runs inside a Firestore transaction to prevent race conditions.
+- Fixed: createRushNight in QRCodes now has try/catch error handling.
+- Cleaned up: removed dead VITE_CHAPTER_PASSCODE / VITE_MEMBER_PASSCODE from .env and .env.example.
+- Rewrote CLAUDE.md to reflect the current multi-tenant email-link auth model.
+- Next session starts with: Firebase console config, then end-to-end testing.

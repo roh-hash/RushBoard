@@ -1,30 +1,51 @@
 /* ── Home / Landing ── */
 
 .home {
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: var(--space-lg);
-  background: var(--bg-primary);
-  animation: fadeIn 0.5s var(--ease-out) both;
+  padding: var(--space-xl);
+  padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
 }
 
-.home-content {
-  text-align: center;
-  max-width: 380px;
+@media (max-width: 480px) {
+  .home {
+    padding: var(--space-lg) var(--space-md);
+    align-items: flex-start;
+    padding-top: 48px;
+  }
+}
+
+.home-grid {
   width: 100%;
+  max-width: 1080px;
+  display: grid;
+  grid-template-columns: 1.35fr 0.9fr;
+  gap: var(--space-xl);
+  align-items: center;
+}
+
+@media (max-width: 840px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.home-kicker {
+  margin: 0 0 var(--space-sm);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .home-title {
-  font-family: var(--font-display);
-  font-size: 56px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 6px;
-  letter-spacing: -0.03em;
-  line-height: 1;
+  font-size: clamp(64px, 12vw, 112px);
+  line-height: 0.94;
+  margin: 0 0 var(--space-md);
 }
 
 .home-title span {
@@ -32,43 +53,44 @@
 }
 
 .home-subtitle {
-  font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 300;
+  max-width: 28ch;
+  font-size: 18px;
   color: var(--text-secondary);
-  margin: 0 0 48px;
-  letter-spacing: 0.01em;
+  margin: 0 0 var(--space-xl);
 }
 
-/* ── Decorative rule ── */
-.home-rule {
-  width: 40px;
-  height: 2px;
-  background: var(--accent);
-  border: none;
-  margin: 0 auto 48px;
-  opacity: 0.6;
-}
-
-.home-buttons {
+.home-actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
-.home-btn-primary {
-  width: 100%;
+@media (max-width: 480px) {
+  .home-actions {
+    flex-direction: column;
+  }
+
+  .home-btn-primary,
+  .home-btn-secondary {
+    text-align: center;
+    width: 100%;
+  }
+}
+
+.home-btn-primary,
+.home-btn-secondary {
   padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: var(--font-body);
-  letter-spacing: 0.03em;
-  background: var(--text-primary);
-  color: var(--text-inverse);
-  border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
+  font: inherit;
   cursor: pointer;
   transition: all 0.2s var(--ease-out);
+}
+
+.home-btn-primary {
+  border: none;
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  font-weight: 600;
 }
 
 .home-btn-primary:hover {
@@ -76,43 +98,52 @@
   box-shadow: 0 4px 16px var(--accent-glow);
 }
 
-.home-btn-primary:active {
-  transform: scale(0.98);
-}
-
 .home-btn-secondary {
-  width: 100%;
-  padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: var(--font-body);
-  letter-spacing: 0.02em;
   background: transparent;
   color: var(--text-primary);
   border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.2s var(--ease-out);
 }
 
 .home-btn-secondary:hover {
   border-color: var(--border-strong);
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.55);
 }
 
-.home-btn-secondary:active {
-  transform: scale(0.98);
+.home-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
-.home-btn-disabled {
-  width: 100%;
-  padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: var(--font-body);
-  background: var(--bg-secondary);
-  color: var(--text-tertiary);
+.home-panel-card,
+.home-panel-note {
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: var(--shadow-md);
+}
+
+.home-panel-card {
+  padding: var(--space-xl);
+}
+
+.home-panel-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-md);
+}
+
+.home-feature-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 12px;
+  color: var(--text-primary);
+}
+
+.home-panel-note {
+  padding: var(--space-lg);
+  color: var(--text-secondary);
 }

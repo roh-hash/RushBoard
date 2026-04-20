@@ -1,49 +1,137 @@
-import { useState, useCallback } from 'react';
+import { createContext, createElement, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  isSignInWithEmailLink,
+  onAuthStateChanged,
+  sendSignInLinkToEmail,
+  signInWithEmailLink,
+  signOut,
+} from 'firebase/auth';
+import { collectionGroup, db, auth, onSnapshot, query, where } from '../lib/firebase';
 
-const STORAGE_KEY = 'rushboard_auth';
-const RUSH_CHAIR_PASSCODE = 'rush2026';
-const MEMBER_PASSCODE = import.meta.env.VITE_MEMBER_PASSCODE || 'members2026';
+const AuthContext = createContext(null);
 
-function getStored() {
+const PENDING_EMAIL_KEY = 'rushboard_pending_email';
+const PENDING_FLOW_KEY = 'rushboard_pending_flow';
+
+function getStoredJson(key) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-export function useAuth() {
-  const [auth, setAuth] = useState(getStored);
+function getPendingEmail() {
+  return localStorage.getItem(PENDING_EMAIL_KEY) || '';
+}
 
-  const login = useCallback((passcode, firstName, lastName, loginType) => {
-    const expectedPasscode = loginType === 'rushChair' ? RUSH_CHAIR_PASSCODE : MEMBER_PASSCODE;
-    if (passcode !== expectedPasscode) {
-      return { success: false, error: 'Wrong passcode' };
-    }
-    if (!firstName.trim() || !lastName.trim()) {
-      return { success: false, error: 'Enter your first and last name' };
-    }
-    const data = {
-      memberName: `${firstName.trim()} ${lastName.trim()}`,
-      loggedInAt: new Date().toISOString(),
-      isRushChair: loginType === 'rushChair',
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    setAuth(data);
-    return { success: true };
-  }, []);
+function setPendingFlow(email, flow) {
+  localStorage.setItem(PENDING_EMAIL_KEY, email);
+  localStorage.setItem(PENDING_FLOW_KEY, JSON.stringify(flow));
+}
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setAuth(null);
-  }, []);
+function clearPendingFlow() {
+  localStorage.removeItem(PENDING_EMAIL_KEY);
+  localStorage.removeItem(PENDING_FLOW_KEY);
+}
 
+function buildActionCodeSettings() {
   return {
-    memberName: auth?.memberName || null,
-    isLoggedIn: !!auth,
-    isRushChair: auth?.isRushChair || false,
-    login,
-    logout,
+    url: `${window.location.origin}/finish-signin`,
+    handleCodeInApp: true,
   };
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [memberships, setMemberships] = useState([]);
+  const [membershipOwnerUid, setMembershipOwnerUid] = useState(null);
+  const [membershipError, setMembershipError] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      if (!nextUser) {
+        setMemberships([]);
+        setMembershipOwnerUid(null);
+        setMembershipError('');
+      } else {
+        setMembershipOwnerUid(null);
+        setMembershipError('');
+      }
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const membershipQuery = query(
+      collectionGroup(db, 'members'),
+      where('uid', '==', user.uid),
+    );
+
+    const unsubscribe = onSnapshot(
+      membershipQuery,
+      (snap) => {
+        setMemberships(
+          snap.docs
+            .map((memberDoc) => ({ id: memberDoc.id, ...memberDoc.data() }))
+            .filter((member) => member.status === 'active'),
+        );
+        setMembershipOwnerUid(user.uid);
+        setMembershipError('');
+      },
+      (error) => {
+        console.error('Failed to load chapter memberships:', error);
+        setMemberships([]);
+        setMembershipOwnerUid(user.uid);
+        setMembershipError(error?.message || 'Could not load your chapter access.');
+      },
+    );
+
+    return unsubscribe;
+  }, [user]);
+
+  const membershipsLoading = !!user && membershipOwnerUid !== user.uid;
+
+  const value = useMemo(() => ({
+    user,
+    loading,
+    memberships,
+    membershipsLoading,
+    membershipError,
+    isLoggedIn: !!user,
+    pendingEmail: getPendingEmail(),
+    pendingFlow: getStoredJson(PENDING_FLOW_KEY),
+    async sendMagicLink(email, flow) {
+      const normalizedEmail = email.trim().toLowerCase();
+      setPendingFlow(normalizedEmail, flow);
+      await sendSignInLinkToEmail(auth, normalizedEmail, buildActionCodeSettings());
+    },
+    isMagicLink(url) {
+      return isSignInWithEmailLink(auth, url);
+    },
+    async completeMagicLink(email, url) {
+      return signInWithEmailLink(auth, email.trim().toLowerCase(), url);
+    },
+    clearPendingFlow,
+    async logout() {
+      await signOut(auth);
+    },
+  }), [loading, membershipError, memberships, membershipsLoading, user]);
+
+  return createElement(AuthContext.Provider, { value }, children);
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider.');
+  }
+  return context;
 }

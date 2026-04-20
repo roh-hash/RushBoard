@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { db, ratingsRef, commentsRef, setRating, addComment, setTalkedTo, getTalkedTo, setBidStatus } from '../lib/firebase';
-import { useAuth } from '../hooks/useAuth';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { addComment, commentsRef, db, doc, getTalkedTo, onSnapshot, orderBy, query, ratingsRef, setBidStatus, setRating, setTalkedTo } from '../lib/firebase';
+import { useChapterContext } from '../hooks/useChapter';
 import './Profile.css';
 
 export default function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { memberName, isRushChair } = useAuth();
-
+  const { chapter, membership, isRushChair } = useChapterContext();
   const [rushee, setRushee] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [comments, setComments] = useState([]);
@@ -19,48 +17,57 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    return onSnapshot(doc(db, 'rushees', id), (snap) => {
-      if (snap.exists()) setRushee({ id: snap.id, ...snap.data() });
+    if (!chapter?.id) return undefined;
+
+    return onSnapshot(doc(db, 'chapters', chapter.id, 'rushees', id), (snap) => {
+      if (snap.exists()) {
+        setRushee({ id: snap.id, ...snap.data() });
+      }
     });
-  }, [id]);
+  }, [chapter?.id, id]);
 
   useEffect(() => {
-    return onSnapshot(query(ratingsRef(id), orderBy('timestamp', 'desc')), (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setRatings(list);
-      const mine = list.find((r) => r.memberName === memberName);
-      if (mine) setMyRating(mine.score);
+    if (!chapter?.id || !membership?.uid) return undefined;
+
+    return onSnapshot(query(ratingsRef(chapter.id, id), orderBy('timestamp', 'desc')), (snap) => {
+      const nextRatings = snap.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+      setRatings(nextRatings);
+      const mine = nextRatings.find((entry) => entry.memberUid === membership.uid);
+      setMyRating(mine?.score || 0);
     });
-  }, [id, memberName]);
+  }, [chapter?.id, id, membership?.uid]);
 
   useEffect(() => {
-    return onSnapshot(query(commentsRef(id), orderBy('timestamp', 'desc')), (snap) => {
-      setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    if (!chapter?.id) return undefined;
+
+    return onSnapshot(query(commentsRef(chapter.id, id), orderBy('timestamp', 'desc')), (snap) => {
+      setComments(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
     });
-  }, [id]);
+  }, [chapter?.id, id]);
 
   useEffect(() => {
-    getTalkedTo(id, memberName).then(setTalkedToState);
-  }, [id, memberName]);
+    if (!chapter?.id || !membership?.uid) return;
+    getTalkedTo(chapter.id, id, membership.uid).then(setTalkedToState);
+  }, [chapter?.id, id, membership?.uid]);
 
   async function handleRate(score) {
     setMyRating(score);
-    await setRating(id, memberName, score);
+    await setRating(chapter.id, id, membership, score);
   }
 
-  async function handleComment(e) {
-    e.preventDefault();
+  async function handleComment(event) {
+    event.preventDefault();
     if (!commentText.trim()) return;
     setSubmitting(true);
-    await addComment(id, memberName, commentText.trim());
+    await addComment(chapter.id, id, membership, commentText.trim());
     setCommentText('');
     setSubmitting(false);
   }
 
   async function handleTalkedTo() {
-    const next = !talkedTo;
-    setTalkedToState(next);
-    await setTalkedTo(id, memberName, next);
+    const nextValue = !talkedTo;
+    setTalkedToState(nextValue);
+    await setTalkedTo(chapter.id, id, membership, nextValue);
   }
 
   if (!rushee) {
@@ -69,7 +76,7 @@ export default function Profile() {
 
   return (
     <div className="profile-page">
-      <button onClick={() => navigate('/dashboard')} className="profile-back">&larr; Back</button>
+      <button onClick={() => navigate(`/${chapter.slug}/dashboard`)} className="profile-back">&larr; Back</button>
 
       <div className="profile-header">
         {rushee.photoURL ? (
@@ -80,24 +87,38 @@ export default function Profile() {
           </div>
         )}
         <div>
+          <p className="profile-kicker">{chapter.displayName} Rush</p>
           <h1 className="profile-name">{rushee.displayName}</h1>
           {rushee.hometown && <div className="profile-hometown">{rushee.hometown}</div>}
           {rushee.year && <div className="profile-year">{rushee.year}</div>}
-          {rushee.tag && <span className="profile-badge">{rushee.tag}</span>}
+          {rushee.tags?.length > 0 && (
+            <div className="profile-badges">
+              {rushee.tags.map((tag) => <span key={tag} className="profile-badge">{tag}</span>)}
+            </div>
+          )}
           <div className="profile-nights">
             {rushee.attendedNights?.length || 0} night{(rushee.attendedNights?.length || 0) !== 1 ? 's' : ''} attended
           </div>
+          {rushee.avgRating != null && (
+            <div className="profile-avg">
+              <span className="profile-avg-value">{rushee.avgRating.toFixed(1)}</span>
+              <span className="profile-avg-stars">
+                {'★'.repeat(Math.round(rushee.avgRating))}{'☆'.repeat(5 - Math.round(rushee.avgRating))}
+              </span>
+              <span className="profile-avg-label">{rushee.ratingCount} rating{rushee.ratingCount !== 1 ? 's' : ''}</span>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="profile-section">
         <h3 className="profile-section-title">Your Rating</h3>
         <div className="profile-stars">
-          {[1, 2, 3, 4, 5].map((n) => (
+          {[1, 2, 3, 4, 5].map((number) => (
             <button
-              key={n}
-              onClick={() => handleRate(n)}
-              className={`profile-star ${n <= myRating ? 'profile-star--filled' : 'profile-star--empty'}`}
+              key={number}
+              onClick={() => handleRate(number)}
+              className={`profile-star ${number <= myRating ? 'profile-star--filled' : 'profile-star--empty'}`}
             >
               &#9733;
             </button>
@@ -109,7 +130,7 @@ export default function Profile() {
       <div className="profile-section">
         <label className="profile-talked">
           <input type="checkbox" checked={talkedTo} onChange={handleTalkedTo} />
-          I've talked to {rushee.displayName?.split(' ')[0]}
+          I&apos;ve talked to {rushee.displayName?.split(' ')[0]}
         </label>
       </div>
 
@@ -124,7 +145,7 @@ export default function Profile() {
             ].map(({ status, label }) => (
               <button
                 key={status}
-                onClick={() => setBidStatus(id, status, memberName)}
+                onClick={() => setBidStatus(chapter.id, id, status, membership)}
                 className={`profile-bid-btn ${rushee.bidStatus === status ? `profile-bid-btn--${status}-active` : ''}`}
               >
                 {label}
@@ -139,9 +160,9 @@ export default function Profile() {
         <form onSubmit={handleComment} className="profile-comment-form">
           <input
             type="text"
-            placeholder="Add a comment..."
             value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
+            onChange={(event) => setCommentText(event.target.value)}
+            placeholder="Add a comment..."
             className="profile-comment-input"
           />
           <button type="submit" disabled={submitting || !commentText.trim()} className="profile-comment-post">
@@ -151,12 +172,12 @@ export default function Profile() {
         {comments.length === 0 ? (
           <p className="profile-empty">No comments yet.</p>
         ) : (
-          comments.map((c) => (
-            <div key={c.id} className="profile-comment">
-              <div className="profile-comment-author">{c.memberName}</div>
-              <div className="profile-comment-text">{c.text}</div>
+          comments.map((comment) => (
+            <div key={comment.id} className="profile-comment">
+              <div className="profile-comment-author">{comment.memberName}</div>
+              <div className="profile-comment-text">{comment.text}</div>
               <div className="profile-comment-time">
-                {c.timestamp?.toDate?.()?.toLocaleString() || ''}
+                {comment.timestamp?.toDate?.()?.toLocaleString() || ''}
               </div>
             </div>
           ))
@@ -168,12 +189,12 @@ export default function Profile() {
         {ratings.length === 0 ? (
           <p className="profile-empty">No ratings yet.</p>
         ) : (
-          ratings.map((r) => (
-            <div key={r.id} className="profile-rating-row">
-              <span className="profile-rating-member">{r.memberName}</span>
+          ratings.map((rating) => (
+            <div key={rating.id} className="profile-rating-row">
+              <span className="profile-rating-member">{rating.memberName}</span>
               <span>
-                <span className="profile-rating-stars">{'★'.repeat(r.score)}</span>
-                <span className="profile-rating-stars-empty">{'★'.repeat(5 - r.score)}</span>
+                <span className="profile-rating-stars">{'★'.repeat(rating.score)}</span>
+                <span className="profile-rating-stars-empty">{'★'.repeat(5 - rating.score)}</span>
               </span>
             </div>
           ))

@@ -1,0 +1,132 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(chapterId) {
+      return /databases/$(database)/documents/chapters/$(chapterId)/members/$(request.auth.uid);
+    }
+
+    function isChapterMember(chapterId) {
+      return isSignedIn() &&
+        exists(memberPath(chapterId)) &&
+        get(memberPath(chapterId)).data.status == 'active';
+    }
+
+    function isRushChair(chapterId) {
+      return isChapterMember(chapterId) &&
+        get(memberPath(chapterId)).data.role == 'rush_chair';
+    }
+
+    function isCreatingOwnChapter(chapterId) {
+      return isSignedIn() &&
+        getAfter(/databases/$(database)/documents/chapters/$(chapterId)).data.createdByUid == request.auth.uid;
+    }
+
+    function isPublicRusheeCreate() {
+      return request.resource.data.keys().hasOnly([
+        'firstName',
+        'lastName',
+        'displayName',
+        'phone',
+        'hometown',
+        'year',
+        'tags',
+        'photoURL',
+        'attendedNights',
+        'avgRating',
+        'ratingCount',
+        'createdAt'
+      ]) &&
+      request.resource.data.firstName is string &&
+      request.resource.data.lastName is string &&
+      request.resource.data.displayName is string &&
+      request.resource.data.phone is string &&
+      request.resource.data.hometown is string &&
+      request.resource.data.year is string &&
+      request.resource.data.tags is list &&
+      request.resource.data.photoURL is string &&
+      request.resource.data.attendedNights is list &&
+      request.resource.data.ratingCount == 0;
+    }
+
+    function isPublicRusheeUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'attendedNights',
+        'updatedAt'
+      ]);
+    }
+
+    match /chapterSlugs/{slug} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Required for collectionGroup('members') queries used during auth bootstrap.
+    // The query filters by the `uid` field, so the rule must check resource.data.uid
+    // (not the document-ID wildcard) for Firestore to allow the collection group query.
+    match /{path=**}/members/{memberId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isRushChair(chapterId);
+      allow delete: if false;
+
+      match /settings/{docId} {
+        allow read: if true;
+        allow create: if isCreatingOwnChapter(chapterId);
+        allow update, delete: if isRushChair(chapterId);
+      }
+
+      match /members/{uid} {
+        allow read: if (isSignedIn() && request.auth.uid == uid) || isChapterMember(chapterId);
+        allow create: if isSignedIn() && request.auth.uid == uid;
+        allow update: if isRushChair(chapterId) || (isSignedIn() && request.auth.uid == uid);
+        allow delete: if isRushChair(chapterId);
+      }
+
+      match /invites/{inviteId} {
+        allow read: if true;
+        allow create, delete: if isRushChair(chapterId);
+        allow update: if isRushChair(chapterId) ||
+          (isSignedIn() && resource.data.email == request.auth.token.email);
+      }
+
+      match /rushNights/{nightId} {
+        allow read: if true;
+        allow write: if isRushChair(chapterId);
+      }
+
+      match /rushees/{rusheeId} {
+        allow read: if isChapterMember(chapterId);
+        allow create: if isChapterMember(chapterId) || isPublicRusheeCreate();
+        allow update: if isChapterMember(chapterId) || isPublicRusheeUpdate();
+        allow delete: if isRushChair(chapterId);
+
+        match /ratings/{ratingId} {
+          allow read: if isChapterMember(chapterId);
+          allow create, update: if isChapterMember(chapterId) && request.auth.uid == ratingId;
+          allow delete: if isChapterMember(chapterId) && request.auth.uid == ratingId;
+        }
+
+        match /comments/{commentId} {
+          allow read: if isChapterMember(chapterId);
+          allow create: if isChapterMember(chapterId);
+          allow update, delete: if isRushChair(chapterId);
+        }
+
+        match /talkedTo/{memberUid} {
+          allow read: if isChapterMember(chapterId);
+          allow create, update, delete: if isChapterMember(chapterId) && request.auth.uid == memberUid;
+        }
+      }
+    }
+  }
+}

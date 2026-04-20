@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { onSnapshot, orderBy, query } from 'firebase/firestore';
 import QRCode from 'qrcode';
-import { rushNightsRef, createRushNight } from '../lib/firebase';
-import { useAuth } from '../hooks/useAuth';
+import { createRushNight, onSnapshot, orderBy, query, rushNightsRef } from '../lib/firebase';
+import { useChapterContext } from '../hooks/useChapter';
 import './QRCodes.css';
 
 export default function QRCodes() {
-  const { memberName } = useAuth();
   const navigate = useNavigate();
+  const { chapter, membership } = useChapterContext();
   const [nights, setNights] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [label, setLabel] = useState('');
@@ -16,33 +15,43 @@ export default function QRCodes() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    return onSnapshot(query(rushNightsRef(), orderBy('createdAt', 'desc')), (snap) => {
-      setNights(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-  }, []);
+    if (!chapter?.id) return undefined;
 
-  async function handleCreate(e) {
-    e.preventDefault();
+    return onSnapshot(query(rushNightsRef(chapter.id), orderBy('createdAt', 'desc')), (snap) => {
+      setNights(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
+    });
+  }, [chapter?.id]);
+
+  async function handleCreate(event) {
+    event.preventDefault();
     setError('');
+
     if (!label.trim()) {
-      setError('Enter a label for this night.');
+      setError('Enter a label for this rush night.');
       return;
     }
+
     setCreating(true);
-    await createRushNight(label.trim(), memberName);
-    setLabel('');
-    setShowCreate(false);
-    setCreating(false);
+    try {
+      await createRushNight(chapter.id, label.trim(), membership);
+      setLabel('');
+      setShowCreate(false);
+    } catch (err) {
+      setError(err?.message || 'Could not create rush night.');
+    } finally {
+      setCreating(false);
+    }
   }
 
   const baseUrl = window.location.origin;
 
   return (
     <div className="qr-page">
-      <button onClick={() => navigate('/dashboard')} className="qr-back">&larr; Back to Dashboard</button>
+      <button onClick={() => navigate(`/${chapter.slug}/dashboard`)} className="qr-back">&larr; Back to Dashboard</button>
+      <p className="qr-kicker">{chapter.displayName} Rush</p>
       <h1 className="qr-title">Rush Night QR Codes</h1>
 
-      <button onClick={() => setShowCreate(!showCreate)} className="qr-create-btn">
+      <button onClick={() => setShowCreate((current) => !current)} className="qr-create-btn">
         {showCreate ? 'Cancel' : '+ New Rush Night'}
       </button>
 
@@ -51,9 +60,9 @@ export default function QRCodes() {
           <div className="qr-create-field">
             <input
               type="text"
-              placeholder='Night label (e.g. "BBQ Night")'
               value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder='Night label (e.g. "BBQ Night")'
               className="qr-create-input"
             />
           </div>
@@ -68,27 +77,30 @@ export default function QRCodes() {
         <p className="qr-empty">No rush nights yet. Create one above.</p>
       ) : (
         nights.map((night) => (
-          <NightCard key={night.id} night={night} baseUrl={baseUrl} />
+          <NightCard key={night.id} night={night} baseUrl={baseUrl} chapterSlug={chapter.slug} />
         ))
       )}
     </div>
   );
 }
 
-function NightCard({ night, baseUrl }) {
+function NightCard({ night, baseUrl, chapterSlug }) {
   const canvasRef = useRef(null);
-  const checkinUrl = `${baseUrl}/checkin/${night.id}`;
-  const dashboardUrl = `${baseUrl}/dashboard`;
+  const checkinUrl = `${baseUrl}/${chapterSlug}/checkin/${night.id}`;
+  const dashboardUrl = `${baseUrl}/${chapterSlug}/dashboard`;
   const [copied, setCopied] = useState('');
 
   useEffect(() => {
-    if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, checkinUrl, { width: 200, margin: 2 });
-    }
+    if (!canvasRef.current) return;
+    const scale = window.devicePixelRatio || 1;
+    const displaySize = 200;
+    QRCode.toCanvas(canvasRef.current, checkinUrl, { width: displaySize * scale, margin: 2 });
+    canvasRef.current.style.width = `${displaySize}px`;
+    canvasRef.current.style.height = `${displaySize}px`;
   }, [checkinUrl]);
 
   function copyLink(url, label) {
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(url).catch(() => {});
     setCopied(label);
     setTimeout(() => setCopied(''), 2000);
   }
@@ -109,7 +121,7 @@ function NightCard({ night, baseUrl }) {
         </div>
         <div className="qr-night-info">
           <h3 className="qr-night-label">{night.label || night.id}</h3>
-          <div className="qr-night-creator">Created by {night.createdBy}</div>
+          <div className="qr-night-creator">Created by {night.createdByName}</div>
 
           <div className="qr-night-links">
             <LinkRow label="Check-in" url={checkinUrl} copied={copied === 'checkin'} onCopy={() => copyLink(checkinUrl, 'checkin')} />

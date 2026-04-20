@@ -40,3 +40,27 @@ This file exists so we stop re-solving the same problems. If something is unclea
 **Problem:** Name matching is fragile — "John Smith" vs "john smith" would create duplicates.
 **Resolution:** Store `firstName` and `lastName` as lowercase in Firestore, keep a separate `displayName` field with original casing for display.
 **Takeaway:** Always normalize before querying. Display name is separate from query name.
+
+## 2026-04-16 — Chapter membership docs need chapter metadata duplicated
+**Context:** Refactoring RushBoard from a single global roster into chapter-scoped data with Firebase Auth.
+**Problem / question:** After email-link sign-in, the app needs to know which chapter dashboards a user can enter before a specific chapter page has loaded.
+**Resolution:** Store `chapterId`, `chapterSlug`, and `chapterDisplayName` directly on each `chapters/{chapterId}/members/{uid}` doc. This makes `collectionGroup('members')` lookups viable for the signed-in session bootstrap without an extra join layer.
+**Takeaway:** Duplicate a small amount of chapter metadata onto membership docs when it makes auth/session bootstrapping dramatically simpler.
+
+## 2026-04-16 — Public check-in rules stay looser until uploads move behind trusted code
+**Context:** The new chapter model adds Firebase rules files, but rushee check-in still happens directly from the browser and can upload photos before any member is signed in.
+**Problem / question:** Strict chapter-private rules conflict with a public check-in flow unless a trusted backend mediates the write/upload.
+**Resolution:** Keep the current browser-only public check-in path working, but document in `storage.rules` and the session log that this should be tightened once photo upload and invite issuance move behind Cloud Functions or another trusted backend.
+**Takeaway:** Public browser writes are the sharp edge in a multi-tenant Firebase app; treat them as a transitional compromise, not the finished security model.
+
+## 2026-04-16 — FinishSignIn useEffect must not depend on user-typed state
+**Context:** FinishSignIn had `email` in its useEffect dependency array so it could handle the "needs_email" case.
+**Problem:** Every keystroke in the email input re-ran the entire effect, spamming `signInWithEmailLink` calls to Firebase Auth.
+**Resolution:** Removed `email` from deps. The effect only runs once on mount. If the user needs to type their email (no pendingEmail in localStorage), a separate submit handler calls the sign-in function explicitly.
+**Takeaway:** Never put user-controlled input state in a useEffect dependency array that triggers async side effects.
+
+## 2026-04-16 — Firestore invite rules must scope update access
+**Context:** The invite update rule was `isRushChair(chapterId) || isSignedIn()`.
+**Problem:** Any signed-in user from any chapter could accept (update) any invite in any other chapter.
+**Resolution:** Changed to `isRushChair(chapterId) || (isSignedIn() && resource.data.email == request.auth.token.email)` — only the invite's intended recipient or the chapter's rush chair can update it.
+**Takeaway:** In multi-tenant Firestore rules, `isSignedIn()` alone is never enough for cross-tenant writes. Always scope to the specific user or tenant.

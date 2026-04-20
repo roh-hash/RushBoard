@@ -4,6 +4,7 @@
   max-width: 440px;
   margin: 0 auto;
   padding: 40px var(--space-lg) var(--space-2xl);
+  padding-bottom: calc(var(--space-2xl) + env(safe-area-inset-bottom, 0px));
   animation: fadeUp 0.4s var(--ease-out) both;
 }
 
@@ -14,6 +15,20 @@
   color: var(--text-primary);
   margin: 0 0 var(--space-lg);
   letter-spacing: -0.02em;
+}
+
+.checkin-kicker {
+  margin: 0 0 var(--space-sm);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.checkin-copy {
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-xl);
 }
 
 /* ── Form fields ── */

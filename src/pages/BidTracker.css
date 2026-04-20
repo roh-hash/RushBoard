@@ -2,9 +2,17 @@
 
 .tracker-page {
   padding: var(--space-lg);
+  padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
   max-width: 700px;
   margin: 0 auto;
   animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+@media (max-width: 480px) {
+  .tracker-page {
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .tracker-title {
@@ -14,6 +22,15 @@
   color: var(--text-primary);
   margin: 0 0 var(--space-md);
   letter-spacing: -0.02em;
+}
+
+.tracker-kicker {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .tracker-nav {
@@ -177,8 +194,8 @@
 }
 
 .tracker-response-btn {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
   font-weight: 400;
   font-family: var(--font-body);
   border: 1px solid var(--border-medium);

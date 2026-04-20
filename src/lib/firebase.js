@@ -1,6 +1,32 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, getDoc, doc, addDoc, setDoc, updateDoc, deleteDoc, deleteField, arrayUnion, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import {
+  getAuth,
+  browserLocalPersistence,
+  setPersistence,
+} from 'firebase/auth';
+import {
+  addDoc,
+  arrayUnion,
+  collection,
+  collectionGroup,
+  deleteDoc,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
@@ -13,171 +39,507 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// --- Rushee helpers ---
+setPersistence(auth, browserLocalPersistence).catch(() => {
+  // Fall back to Firebase's default persistence if the browser blocks this.
+});
 
-const rusheesCol = collection(db, 'rushees');
+const appCheckSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
-export async function findDuplicateRushee(firstName, lastName, phone) {
-  // Check by phone first (most reliable)
-  if (phone) {
-    const phoneQuery = query(rusheesCol, where('phone', '==', phone));
-    const phoneSnap = await getDocs(phoneQuery);
-    if (!phoneSnap.empty) return phoneSnap.docs[0];
+if (typeof window !== 'undefined' && appCheckSiteKey) {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch {
+    // Ignore duplicate init during hot reload.
   }
-  // Then check by name
-  const nameQuery = query(
-    rusheesCol,
-    where('firstName', '==', firstName.trim().toLowerCase()),
-    where('lastName', '==', lastName.trim().toLowerCase()),
-  );
-  const nameSnap = await getDocs(nameQuery);
-  if (!nameSnap.empty) return nameSnap.docs[0];
-  return null;
 }
 
-export async function uploadRusheePhoto(file, rusheeId) {
-  const storageRef = ref(storage, `rushees/${rusheeId}/${Date.now()}`);
+export const DEFAULT_RUSHEE_TAGS = ['Legacy', 'DJ', 'Biker', 'Hooper'];
+
+function normalizeEmail(email) {
+  return email.trim().toLowerCase();
+}
+
+function buildChapterDisplayName(fraternityName, charterName) {
+  return `${fraternityName.trim()} ${charterName.trim()}`.replace(/\s+/g, ' ').trim();
+}
+
+function sanitizeTags(tags) {
+  const source = Array.isArray(tags) ? tags : [];
+  return Array.from(
+    new Set(
+      source
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 12);
+}
+
+export function slugifyChapter(fraternityName, charterName) {
+  return `${fraternityName}-${charterName}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 48) || 'chapter';
+}
+
+export function chaptersRef() {
+  return collection(db, 'chapters');
+}
+
+export function chapterDoc(chapterId) {
+  return doc(db, 'chapters', chapterId);
+}
+
+export function chapterSettingsDoc(chapterId) {
+  return doc(db, 'chapters', chapterId, 'settings', 'app');
+}
+
+export function chapterMembersCol(chapterId) {
+  return collection(db, 'chapters', chapterId, 'members');
+}
+
+export function chapterInvitesCol(chapterId) {
+  return collection(db, 'chapters', chapterId, 'invites');
+}
+
+export function chapterRusheesCol(chapterId) {
+  return collection(db, 'chapters', chapterId, 'rushees');
+}
+
+export function chapterRushNightsCol(chapterId) {
+  return collection(db, 'chapters', chapterId, 'rushNights');
+}
+
+export function ratingsRef(chapterId, rusheeId) {
+  return collection(db, 'chapters', chapterId, 'rushees', rusheeId, 'ratings');
+}
+
+export function commentsRef(chapterId, rusheeId) {
+  return collection(db, 'chapters', chapterId, 'rushees', rusheeId, 'comments');
+}
+
+function talkedToDoc(chapterId, rusheeId, memberUid) {
+  return doc(db, 'chapters', chapterId, 'rushees', rusheeId, 'talkedTo', memberUid);
+}
+
+function rushNightDoc(chapterId, nightId) {
+  return doc(db, 'chapters', chapterId, 'rushNights', nightId);
+}
+
+function chapterInviteDoc(chapterId, inviteId) {
+  return doc(db, 'chapters', chapterId, 'invites', inviteId);
+}
+
+export async function getChapterBySlug(slug) {
+  const snap = await getDocs(query(chaptersRef(), where('slug', '==', slug), limit(1)));
+  if (snap.empty) return null;
+  const chapter = snap.docs[0];
+  return { id: chapter.id, ...chapter.data() };
+}
+
+export async function listUserMemberships(uid) {
+  const snap = await getDocs(
+    query(collectionGroup(db, 'members'), where('uid', '==', uid)),
+  );
+
+  return snap.docs
+    .map((memberDoc) => ({ id: memberDoc.id, ...memberDoc.data() }))
+    .filter((member) => member.status === 'active');
+}
+
+export async function createChapterWithOwner({
+  fraternityName,
+  charterName,
+  ownerUid,
+  ownerEmail,
+  ownerName,
+  rusheeTags,
+}) {
+  const cleanFraternity = fraternityName.trim();
+  const cleanCharter = charterName.trim();
+  const displayName = buildChapterDisplayName(cleanFraternity, cleanCharter);
+  const baseSlug = slugifyChapter(cleanFraternity, cleanCharter);
+
+  return runTransaction(db, async (transaction) => {
+    let slug = baseSlug;
+    let suffix = 1;
+    let slugRef = doc(db, 'chapterSlugs', slug);
+    let existingSlug = await transaction.get(slugRef);
+
+    while (existingSlug.exists()) {
+      suffix += 1;
+      slug = `${baseSlug}-${suffix}`;
+      slugRef = doc(db, 'chapterSlugs', slug);
+      existingSlug = await transaction.get(slugRef);
+    }
+
+    const createdChapterRef = doc(chaptersRef());
+    const settingsRef = chapterSettingsDoc(createdChapterRef.id);
+    const memberRef = doc(chapterMembersCol(createdChapterRef.id), ownerUid);
+
+    transaction.set(createdChapterRef, {
+      fraternityName: cleanFraternity,
+      charterName: cleanCharter,
+      displayName,
+      slug,
+      createdAt: serverTimestamp(),
+      createdByUid: ownerUid,
+    });
+
+    transaction.set(slugRef, {
+      chapterId: createdChapterRef.id,
+      slug,
+      createdAt: serverTimestamp(),
+    });
+
+    transaction.set(settingsRef, {
+      rusheeTags: sanitizeTags(rusheeTags),
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(memberRef, {
+      uid: ownerUid,
+      email: normalizeEmail(ownerEmail),
+      fullName: ownerName.trim(),
+      role: 'rush_chair',
+      status: 'active',
+      chapterId: createdChapterRef.id,
+      chapterSlug: slug,
+      chapterDisplayName: displayName,
+      invitedAt: serverTimestamp(),
+      joinedAt: serverTimestamp(),
+    });
+
+    return {
+      chapterId: createdChapterRef.id,
+      slug,
+      displayName,
+    };
+  });
+}
+
+export async function updateChapterProfile(chapterId, { fraternityName, charterName }) {
+  const chapterRef = chapterDoc(chapterId);
+  const cleanFraternity = fraternityName.trim();
+  const cleanCharter = charterName.trim();
+  const displayName = buildChapterDisplayName(cleanFraternity, cleanCharter);
+
+  await updateDoc(chapterRef, {
+    fraternityName: cleanFraternity,
+    charterName: cleanCharter,
+    displayName,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function updateChapterSettings(chapterId, { rusheeTags }) {
+  await setDoc(
+    chapterSettingsDoc(chapterId),
+    {
+      rusheeTags: sanitizeTags(rusheeTags),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function createChapterInvite(chapterId, { email, fullName, role, createdByUid, createdByName }) {
+  const inviteRef = await addDoc(chapterInvitesCol(chapterId), {
+    email: normalizeEmail(email),
+    fullName: fullName.trim(),
+    role,
+    status: 'pending',
+    createdByUid,
+    createdByName,
+    createdAt: serverTimestamp(),
+  });
+
+  return inviteRef.id;
+}
+
+export async function getChapterInvite(chapterId, inviteId) {
+  const inviteSnap = await getDoc(chapterInviteDoc(chapterId, inviteId));
+  if (!inviteSnap.exists()) return null;
+  return { id: inviteSnap.id, ...inviteSnap.data() };
+}
+
+export async function acceptChapterInvite({
+  chapterId,
+  inviteId,
+  uid,
+  email,
+  fullName,
+}) {
+  const chapterSnap = await getDoc(chapterDoc(chapterId));
+  if (!chapterSnap.exists()) {
+    throw new Error('Chapter not found.');
+  }
+
+  return runTransaction(db, async (transaction) => {
+    const inviteRef = chapterInviteDoc(chapterId, inviteId);
+    const inviteSnap = await transaction.get(inviteRef);
+
+    if (!inviteSnap.exists()) {
+      throw new Error('Invite not found.');
+    }
+
+    const invite = inviteSnap.data();
+    if (invite.status !== 'pending') {
+      throw new Error('Invite has already been used.');
+    }
+
+    if (invite.email && normalizeEmail(invite.email) !== normalizeEmail(email)) {
+      throw new Error('This invite is tied to a different email address.');
+    }
+
+    const chapter = chapterSnap.data();
+    const memberRef = doc(chapterMembersCol(chapterId), uid);
+
+    transaction.set(memberRef, {
+      uid,
+      email: normalizeEmail(email),
+      fullName: fullName.trim() || invite.fullName || '',
+      role: invite.role || 'member',
+      status: 'active',
+      chapterId,
+      chapterSlug: chapter.slug,
+      chapterDisplayName: chapter.displayName,
+      invitedAt: invite.createdAt || serverTimestamp(),
+      joinedAt: serverTimestamp(),
+    }, { merge: true });
+
+    transaction.update(inviteRef, {
+      status: 'accepted',
+      acceptedByUid: uid,
+      acceptedAt: serverTimestamp(),
+    });
+
+    return {
+      chapterSlug: chapter.slug,
+    };
+  });
+}
+
+export async function findDuplicateRushee(chapterId, firstName, lastName, phone) {
+  const rushees = chapterRusheesCol(chapterId);
+  const normalizedPhone = phone.trim();
+
+  if (normalizedPhone) {
+    const phoneSnap = await getDocs(query(rushees, where('phone', '==', normalizedPhone), limit(1)));
+    if (!phoneSnap.empty) return phoneSnap.docs[0];
+  }
+
+  const nameSnap = await getDocs(query(
+    rushees,
+    where('firstName', '==', firstName.trim().toLowerCase()),
+    where('lastName', '==', lastName.trim().toLowerCase()),
+    limit(1),
+  ));
+
+  return nameSnap.empty ? null : nameSnap.docs[0];
+}
+
+export async function uploadRusheePhoto(chapterId, rusheeId, file) {
+  const storageRef = ref(storage, `chapters/${chapterId}/rushees/${rusheeId}/${Date.now()}`);
   await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
 }
 
-export async function createRushee({ firstName, lastName, phone, hometown, year, tag, photoURL, nightId }) {
-  const docRef = await addDoc(rusheesCol, {
+export async function submitRusheeCheckIn({
+  chapterId,
+  nightId,
+  firstName,
+  lastName,
+  phone,
+  hometown,
+  year,
+  tags,
+  photo,
+}) {
+  const duplicate = await findDuplicateRushee(chapterId, firstName, lastName, phone);
+
+  if (duplicate) {
+    await updateDoc(duplicate.ref, {
+      attendedNights: arrayUnion(nightId),
+      updatedAt: serverTimestamp(),
+    });
+
+    return {
+      rusheeId: duplicate.id,
+      displayName: duplicate.data().displayName,
+      photoURL: duplicate.data().photoURL || '',
+      created: false,
+    };
+  }
+
+  const rusheeRef = await addDoc(chapterRusheesCol(chapterId), {
     firstName: firstName.trim().toLowerCase(),
     lastName: lastName.trim().toLowerCase(),
     displayName: `${firstName.trim()} ${lastName.trim()}`,
-    phone: phone || '',
-    hometown: hometown || '',
+    phone: phone.trim(),
+    hometown: hometown.trim(),
     year: year || '',
-    tag: tag || '',
-    photoURL: photoURL || '',
+    tags: sanitizeTags(tags),
+    photoURL: '',
     attendedNights: [nightId],
+    avgRating: null,
+    ratingCount: 0,
     createdAt: serverTimestamp(),
   });
-  return docRef.id;
+
+  let photoURL = '';
+
+  if (photo) {
+    photoURL = await uploadRusheePhoto(chapterId, rusheeRef.id, photo);
+    await updateDoc(rusheeRef, {
+      photoURL,
+    });
+  }
+
+  return {
+    rusheeId: rusheeRef.id,
+    displayName: `${firstName.trim()} ${lastName.trim()}`,
+    photoURL,
+    created: true,
+  };
 }
 
-export async function addNightToRushee(rusheeDoc, nightId) {
-  await updateDoc(rusheeDoc.ref, {
-    attendedNights: arrayUnion(nightId),
-  });
-}
-
-// --- Rating helpers ---
-// Each rating is a doc in rushees/{id}/ratings keyed by memberName
-
-export function ratingsRef(rusheeId) {
-  return collection(db, 'rushees', rusheeId, 'ratings');
-}
-
-export async function setRating(rusheeId, memberName, score) {
-  const ratingDoc = doc(db, 'rushees', rusheeId, 'ratings', memberName);
+export async function setRating(chapterId, rusheeId, member, score) {
+  const ratingDoc = doc(ratingsRef(chapterId, rusheeId), member.uid);
   await setDoc(ratingDoc, {
-    memberName,
+    memberUid: member.uid,
+    memberName: member.fullName,
     score,
     timestamp: serverTimestamp(),
   });
-  await recalcAvgRating(rusheeId);
+  await recalcAvgRating(chapterId, rusheeId);
 }
 
-async function recalcAvgRating(rusheeId) {
-  const snap = await getDocs(ratingsRef(rusheeId));
-  if (snap.empty) {
-    await updateDoc(doc(db, 'rushees', rusheeId), { avgRating: null, ratingCount: 0 });
-    return;
-  }
-  let total = 0;
-  snap.forEach((d) => { total += d.data().score; });
-  await updateDoc(doc(db, 'rushees', rusheeId), {
-    avgRating: total / snap.size,
-    ratingCount: snap.size,
+async function recalcAvgRating(chapterId, rusheeId) {
+  const rusheeRef = doc(chapterRusheesCol(chapterId), rusheeId);
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await getDocs(ratingsRef(chapterId, rusheeId));
+
+    if (snap.empty) {
+      transaction.update(rusheeRef, { avgRating: null, ratingCount: 0 });
+      return;
+    }
+
+    let total = 0;
+    snap.forEach((entry) => {
+      total += entry.data().score;
+    });
+
+    transaction.update(rusheeRef, {
+      avgRating: total / snap.size,
+      ratingCount: snap.size,
+    });
   });
 }
 
-// --- Comment helpers ---
-
-export function commentsRef(rusheeId) {
-  return collection(db, 'rushees', rusheeId, 'comments');
-}
-
-export async function addComment(rusheeId, memberName, text) {
-  await addDoc(commentsRef(rusheeId), {
-    memberName,
+export async function addComment(chapterId, rusheeId, member, text) {
+  await addDoc(commentsRef(chapterId, rusheeId), {
+    memberUid: member.uid,
+    memberName: member.fullName,
     text,
     timestamp: serverTimestamp(),
   });
 }
 
-// --- Talked-to helpers ---
-// Stored as a doc in rushees/{id}/talkedTo keyed by memberName
-
-export async function setTalkedTo(rusheeId, memberName, talked) {
-  const talkedDoc = doc(db, 'rushees', rusheeId, 'talkedTo', memberName);
+export async function setTalkedTo(chapterId, rusheeId, member, talked) {
+  const target = talkedToDoc(chapterId, rusheeId, member.uid);
   if (talked) {
-    await setDoc(talkedDoc, { memberName, timestamp: serverTimestamp() });
+    await setDoc(target, {
+      memberUid: member.uid,
+      memberName: member.fullName,
+      timestamp: serverTimestamp(),
+    });
   } else {
-    await deleteDoc(talkedDoc);
+    await deleteDoc(target);
   }
 }
 
-export async function getTalkedTo(rusheeId, memberName) {
-  const talkedDoc = doc(db, 'rushees', rusheeId, 'talkedTo', memberName);
-  const snap = await getDoc(talkedDoc);
+export async function getTalkedTo(chapterId, rusheeId, memberUid) {
+  const snap = await getDoc(talkedToDoc(chapterId, rusheeId, memberUid));
   return snap.exists();
 }
 
-// --- Rush night helpers ---
-
-const nightsCol = collection(db, 'rushNights');
-
-export async function createRushNight(label, memberName) {
-  const docRef = await addDoc(nightsCol, {
+export async function createRushNight(chapterId, label, member) {
+  const docRef = await addDoc(chapterRushNightsCol(chapterId), {
     label,
-    createdBy: memberName,
+    createdByUid: member.uid,
+    createdByName: member.fullName,
     createdAt: serverTimestamp(),
+    isActive: true,
   });
+
   return docRef.id;
 }
 
-export function rushNightsRef() {
-  return nightsCol;
+export function rushNightsRef(chapterId) {
+  return chapterRushNightsCol(chapterId);
 }
 
-// --- Bid helpers ---
+export async function getRushNight(chapterId, nightId) {
+  const snap = await getDoc(rushNightDoc(chapterId, nightId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+}
 
-export async function setBidStatus(rusheeId, status, memberName) {
-  await updateDoc(doc(db, 'rushees', rusheeId), {
+export async function setBidStatus(chapterId, rusheeId, status, member) {
+  await updateDoc(doc(chapterRusheesCol(chapterId), rusheeId), {
     bidStatus: status,
     lastBidChange: {
-      memberName,
+      memberUid: member.uid,
+      memberName: member.fullName,
       movedTo: status,
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
     },
   });
 }
 
-export async function clearBidStatus(rusheeId, memberName) {
-  await updateDoc(doc(db, 'rushees', rusheeId), {
+export async function clearBidStatus(chapterId, rusheeId, member) {
+  await updateDoc(doc(chapterRusheesCol(chapterId), rusheeId), {
     bidStatus: deleteField(),
     lastBidChange: {
-      memberName,
+      memberUid: member.uid,
+      memberName: member.fullName,
       movedTo: 'uncategorized',
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
     },
   });
 }
 
-// --- Call tracking helpers ---
-
-export async function setCallStatus(rusheeId, { called, response }, memberName) {
-  await updateDoc(doc(db, 'rushees', rusheeId), {
+export async function setCallStatus(chapterId, rusheeId, { called, response }, member) {
+  await updateDoc(doc(chapterRusheesCol(chapterId), rusheeId), {
     called: !!called,
     callResponse: response || '',
     lastCallUpdate: {
-      memberName,
-      timestamp: new Date().toISOString(),
+      memberUid: member.uid,
+      memberName: member.fullName,
+      timestamp: serverTimestamp(),
     },
   });
 }
+
+export {
+  collectionGroup,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  where,
+};

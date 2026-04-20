@@ -2,9 +2,17 @@
 
 .bidlist-page {
   padding: var(--space-lg);
+  padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
   max-width: 1000px;
   margin: 0 auto;
   animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+@media (max-width: 480px) {
+  .bidlist-page {
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .bidlist-header {
@@ -25,9 +33,26 @@
   letter-spacing: -0.02em;
 }
 
+.bidlist-kicker {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .bidlist-nav {
   display: flex;
   gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .bidlist-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .bidlist-nav-btn {
@@ -46,6 +71,27 @@
 .bidlist-nav-btn:hover {
   border-color: var(--border-strong);
   color: var(--text-primary);
+}
+
+/* ── Touch hint (touch devices only) ── */
+.bidlist-touch-hint {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: var(--space-md);
+  background: var(--accent-dim);
+  border: 1px solid rgba(192, 93, 62, 0.15);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .bidlist-touch-hint {
+    display: flex;
+  }
 }
 
 /* ── Uncategorized section ── */
@@ -202,7 +248,7 @@
   font-size: 18px;
   color: var(--text-tertiary);
   cursor: pointer;
-  padding: 0 6px;
+  padding: 8px 10px;
   line-height: 1;
   flex-shrink: 0;
   letter-spacing: 1px;
@@ -244,7 +290,7 @@
 
 .bidlist-assign-opt {
   flex: 1;
-  padding: 8px 0;
+  padding: 12px 0;
   font-size: 12px;
   font-weight: 600;
   font-family: var(--font-body);

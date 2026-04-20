@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { useEffect, useState } from 'react';
+import { chapterRusheesCol, onSnapshot } from '../lib/firebase';
 
-export function useRushees() {
+export function useRushees(chapterId) {
   const [rushees, setRushees] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedChapterId, setLoadedChapterId] = useState(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'rushees'), (snap) => {
-      const docs = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setRushees(docs);
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
+    if (!chapterId) return undefined;
 
-  return { rushees, loading };
+    const unsubscribe = onSnapshot(chapterRusheesCol(chapterId), (snap) => {
+      setRushees(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
+      setLoadedChapterId(chapterId);
+    });
+
+    return unsubscribe;
+  }, [chapterId]);
+
+  return {
+    rushees: chapterId && loadedChapterId === chapterId ? rushees : [],
+    loading: !!chapterId && loadedChapterId !== chapterId,
+  };
 }

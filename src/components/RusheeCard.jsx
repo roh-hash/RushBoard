@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import './RusheeCard.css';
 
-export function RusheeCard({ rushee }) {
+export function RusheeCard({ rushee, chapterSlug }) {
   const navigate = useNavigate();
   const nights = rushee.attendedNights?.length || 0;
 
   return (
-    <div onClick={() => navigate(`/rushee/${rushee.id}`)} className="rushee-card">
+    <div onClick={() => navigate(`/${chapterSlug}/rushee/${rushee.id}`)} className="rushee-card">
       <div className="rushee-photo-wrap">
         {rushee.photoURL ? (
           <img src={rushee.photoURL} alt={rushee.displayName} className="rushee-photo" />
@@ -20,7 +20,7 @@ export function RusheeCard({ rushee }) {
         <div className="rushee-name">{rushee.displayName}</div>
         {rushee.hometown && <div className="rushee-hometown">{rushee.hometown}</div>}
         <div className="rushee-meta">
-          {rushee.tag && <span className="rushee-badge">{rushee.tag}</span>}
+          {rushee.tags?.map((tag) => <span key={tag} className="rushee-badge">{tag}</span>)}
           <span className="rushee-nights">{nights} night{nights !== 1 ? 's' : ''}</span>
         </div>
         {rushee.avgRating != null ? (

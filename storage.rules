@@ -1,0 +1,12 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Public photo uploads are still required for the current browser-only check-in flow.
+    // Tighten this once uploads move behind a trusted backend.
+    match /chapters/{chapterId}/rushees/{rusheeId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

@@ -1,71 +1,71 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { clearBidStatus, setBidStatus } from '../lib/firebase';
+import { useChapterContext } from '../hooks/useChapter';
 import { useRushees } from '../hooks/useRushees';
-import { useAuth } from '../hooks/useAuth';
-import { setBidStatus, clearBidStatus } from '../lib/firebase';
 import './BidList.css';
 
 const COLUMNS = ['bid', 'table', 'fade'];
 const COLUMN_LABELS = { bid: 'Bid', table: 'Table', fade: 'Fade' };
 
 export default function BidList() {
-  const { rushees } = useRushees();
-  const { memberName } = useAuth();
   const navigate = useNavigate();
+  const { chapter, membership } = useChapterContext();
+  const { rushees } = useRushees(chapter?.id);
   const [dragId, setDragId] = useState(null);
-  // Mobile tap-to-assign: which card's menu is open
   const [assignMenuId, setAssignMenuId] = useState(null);
 
-  const uncategorized = useMemo(() => rushees.filter((r) => !r.bidStatus), [rushees]);
+  const uncategorized = useMemo(() => rushees.filter((rushee) => !rushee.bidStatus), [rushees]);
   const columns = useMemo(() => {
-    const cols = { bid: [], table: [], fade: [] };
-    rushees.forEach((r) => {
-      if (r.bidStatus && cols[r.bidStatus]) cols[r.bidStatus].push(r);
+    const nextColumns = { bid: [], table: [], fade: [] };
+    rushees.forEach((rushee) => {
+      if (rushee.bidStatus && nextColumns[rushee.bidStatus]) {
+        nextColumns[rushee.bidStatus].push(rushee);
+      }
     });
-    return cols;
+    return nextColumns;
   }, [rushees]);
-
-  function handleDragStart(id) {
-    setDragId(id);
-  }
 
   function handleDrop(status) {
     if (!dragId) return;
-    setBidStatus(dragId, status, memberName);
+    setBidStatus(chapter.id, dragId, status, membership);
     setDragId(null);
   }
 
   function handleAssign(rusheeId, status) {
-    setBidStatus(rusheeId, status, memberName);
+    setBidStatus(chapter.id, rusheeId, status, membership);
     setAssignMenuId(null);
-  }
-
-  function toggleAssignMenu(rusheeId) {
-    setAssignMenuId((prev) => (prev === rusheeId ? null : rusheeId));
   }
 
   return (
     <div className="bidlist-page">
       <div className="bidlist-header">
-        <h1 className="bidlist-title">Bid List</h1>
-        <div className="bidlist-nav">
-          <button onClick={() => navigate('/dashboard')} className="bidlist-nav-btn">Dashboard</button>
-          <button onClick={() => navigate('/bid-tracker')} className="bidlist-nav-btn">Bid Tracker</button>
+        <div>
+          <p className="bidlist-kicker">{chapter.displayName} Rush</p>
+          <h1 className="bidlist-title">Bid List</h1>
         </div>
+        <div className="bidlist-nav">
+          <button onClick={() => navigate(`/${chapter.slug}/dashboard`)} className="bidlist-nav-btn">Dashboard</button>
+          <button onClick={() => navigate(`/${chapter.slug}/bid-tracker`)} className="bidlist-nav-btn">Bid Tracker</button>
+        </div>
+      </div>
+
+      <div className="bidlist-touch-hint">
+        Tap <strong>···</strong> on any card to move it between columns
       </div>
 
       {uncategorized.length > 0 && (
         <div className="bidlist-uncat">
           <h3 className="bidlist-uncat-title">Uncategorized ({uncategorized.length})</h3>
           <div className="bidlist-uncat-grid">
-            {uncategorized.map((r) => (
+            {uncategorized.map((rushee) => (
               <MiniCard
-                key={r.id}
-                rushee={r}
-                onDragStart={() => handleDragStart(r.id)}
-                showAssignMenu={assignMenuId === r.id}
-                onToggleAssign={() => toggleAssignMenu(r.id)}
-                onAssign={(status) => handleAssign(r.id, status)}
+                key={rushee.id}
+                rushee={rushee}
+                onDragStart={() => setDragId(rushee.id)}
+                showAssignMenu={assignMenuId === rushee.id}
+                onToggleAssign={() => setAssignMenuId((current) => (current === rushee.id ? null : rushee.id))}
+                onAssign={(status) => handleAssign(rushee.id, status)}
               />
             ))}
           </div>
@@ -73,31 +73,29 @@ export default function BidList() {
       )}
 
       <div className="bidlist-columns">
-        {COLUMNS.map((col) => (
+        {COLUMNS.map((column) => (
           <div
-            key={col}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(col)}
-            className={`bidlist-column bidlist-col--${col}`}
+            key={column}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={() => handleDrop(column)}
+            className={`bidlist-column bidlist-col--${column}`}
           >
             <h3 className="bidlist-col-title">
-              {COLUMN_LABELS[col]} ({columns[col].length})
+              {COLUMN_LABELS[column]} ({columns[column].length})
             </h3>
-            {columns[col].map((r) => (
+            {columns[column].map((rushee) => (
               <MiniCard
-                key={r.id}
-                rushee={r}
-                onDragStart={() => handleDragStart(r.id)}
-                onRemove={() => clearBidStatus(r.id, memberName)}
-                showAssignMenu={assignMenuId === r.id}
-                onToggleAssign={() => toggleAssignMenu(r.id)}
-                onAssign={(status) => handleAssign(r.id, status)}
-                currentStatus={col}
+                key={rushee.id}
+                rushee={rushee}
+                onDragStart={() => setDragId(rushee.id)}
+                onRemove={() => clearBidStatus(chapter.id, rushee.id, membership)}
+                showAssignMenu={assignMenuId === rushee.id}
+                onToggleAssign={() => setAssignMenuId((current) => (current === rushee.id ? null : rushee.id))}
+                onAssign={(status) => handleAssign(rushee.id, status)}
+                currentStatus={column}
               />
             ))}
-            {columns[col].length === 0 && (
-              <p className="bidlist-col-empty">Drop here</p>
-            )}
+            {columns[column].length === 0 && <p className="bidlist-col-empty">Drop here</p>}
           </div>
         ))}
       </div>
@@ -122,21 +120,20 @@ function MiniCard({ rushee, onDragStart, onRemove, showAssignMenu, onToggleAssig
             {rushee.avgRating != null ? `${rushee.avgRating.toFixed(1)} avg` : 'Unrated'}
           </div>
         </div>
-        {/* Tap-to-assign button (visible on mobile, hidden on desktop where drag works) */}
-        <button onClick={(e) => { e.stopPropagation(); onToggleAssign(); }} className="bidlist-mini-assign" title="Move to...">
+        <button onClick={(event) => { event.stopPropagation(); onToggleAssign(); }} className="bidlist-mini-assign" title="Move to...">
           &#x2026;
         </button>
         {onRemove && (
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="bidlist-mini-remove" title="Remove">
+          <button onClick={(event) => { event.stopPropagation(); onRemove(); }} className="bidlist-mini-remove" title="Remove">
             &times;
           </button>
         )}
       </div>
       {showAssignMenu && (
         <div className="bidlist-assign-menu">
-          {COLUMNS.filter((col) => col !== currentStatus).map((col) => (
-            <button key={col} onClick={() => onAssign(col)} className={`bidlist-assign-opt bidlist-assign-opt--${col}`}>
-              {COLUMN_LABELS[col]}
+          {COLUMNS.filter((column) => column !== currentStatus).map((column) => (
+            <button key={column} onClick={() => onAssign(column)} className={`bidlist-assign-opt bidlist-assign-opt--${column}`}>
+              {COLUMN_LABELS[column]}
             </button>
           ))}
         </div>
