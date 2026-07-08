@@ -51,6 +51,7 @@ export default function SignIn() {
           <div className="auth-success">
             <h2>Check your inbox</h2>
             <p>We sent a sign-in link to {sentTo}.</p>
+            <p className="auth-spam-note">If you don't see it, check your spam folder.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="auth-form">

@@ -28,6 +28,12 @@ import {
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
+function generateJoinCode() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join('');
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
@@ -105,10 +111,6 @@ export function chapterMembersCol(chapterId) {
   return collection(db, 'chapters', chapterId, 'members');
 }
 
-export function chapterInvitesCol(chapterId) {
-  return collection(db, 'chapters', chapterId, 'invites');
-}
-
 export function chapterRusheesCol(chapterId) {
   return collection(db, 'chapters', chapterId, 'rushees');
 }
@@ -131,10 +133,6 @@ function talkedToDoc(chapterId, rusheeId, memberUid) {
 
 function rushNightDoc(chapterId, nightId) {
   return doc(db, 'chapters', chapterId, 'rushNights', nightId);
-}
-
-function chapterInviteDoc(chapterId, inviteId) {
-  return doc(db, 'chapters', chapterId, 'invites', inviteId);
 }
 
 export async function getChapterBySlug(slug) {
@@ -189,6 +187,8 @@ export async function createChapterWithOwner({
       charterName: cleanCharter,
       displayName,
       slug,
+      memberJoinCode: generateJoinCode(),
+      rushChairJoinCode: generateJoinCode(),
       createdAt: serverTimestamp(),
       createdByUid: ownerUid,
     });
@@ -250,81 +250,47 @@ export async function updateChapterSettings(chapterId, { rusheeTags }) {
   );
 }
 
-export async function createChapterInvite(chapterId, { email, fullName, role, createdByUid, createdByName }) {
-  const inviteRef = await addDoc(chapterInvitesCol(chapterId), {
+export async function regenerateJoinCode(chapterId, role) {
+  const code = generateJoinCode();
+  const field = role === 'rush_chair' ? 'rushChairJoinCode' : 'memberJoinCode';
+  await updateDoc(chapterDoc(chapterId), { [field]: code });
+  return code;
+}
+
+export async function acceptCodeJoin({ chapterId, code, uid, email, fullName }) {
+  const chapterSnap = await getDoc(chapterDoc(chapterId));
+  if (!chapterSnap.exists()) throw new Error('Chapter not found.');
+
+  const chapter = chapterSnap.data();
+
+  let role;
+  if (code === chapter.rushChairJoinCode) {
+    role = 'rush_chair';
+  } else if (code === chapter.memberJoinCode) {
+    role = 'member';
+  } else {
+    throw new Error('Invalid or expired join link.');
+  }
+
+  const memberRef = doc(chapterMembersCol(chapterId), uid);
+  const existing = await getDoc(memberRef);
+  if (existing.exists() && existing.data().status === 'active') {
+    return { chapterSlug: chapter.slug };
+  }
+
+  await setDoc(memberRef, {
+    uid,
     email: normalizeEmail(email),
     fullName: fullName.trim(),
     role,
-    status: 'pending',
-    createdByUid,
-    createdByName,
-    createdAt: serverTimestamp(),
-  });
+    status: 'active',
+    chapterId,
+    chapterSlug: chapter.slug,
+    chapterDisplayName: chapter.displayName,
+    joinedAt: serverTimestamp(),
+  }, { merge: true });
 
-  return inviteRef.id;
-}
-
-export async function getChapterInvite(chapterId, inviteId) {
-  const inviteSnap = await getDoc(chapterInviteDoc(chapterId, inviteId));
-  if (!inviteSnap.exists()) return null;
-  return { id: inviteSnap.id, ...inviteSnap.data() };
-}
-
-export async function acceptChapterInvite({
-  chapterId,
-  inviteId,
-  uid,
-  email,
-  fullName,
-}) {
-  const chapterSnap = await getDoc(chapterDoc(chapterId));
-  if (!chapterSnap.exists()) {
-    throw new Error('Chapter not found.');
-  }
-
-  return runTransaction(db, async (transaction) => {
-    const inviteRef = chapterInviteDoc(chapterId, inviteId);
-    const inviteSnap = await transaction.get(inviteRef);
-
-    if (!inviteSnap.exists()) {
-      throw new Error('Invite not found.');
-    }
-
-    const invite = inviteSnap.data();
-    if (invite.status !== 'pending') {
-      throw new Error('Invite has already been used.');
-    }
-
-    if (invite.email && normalizeEmail(invite.email) !== normalizeEmail(email)) {
-      throw new Error('This invite is tied to a different email address.');
-    }
-
-    const chapter = chapterSnap.data();
-    const memberRef = doc(chapterMembersCol(chapterId), uid);
-
-    transaction.set(memberRef, {
-      uid,
-      email: normalizeEmail(email),
-      fullName: fullName.trim() || invite.fullName || '',
-      role: invite.role || 'member',
-      status: 'active',
-      chapterId,
-      chapterSlug: chapter.slug,
-      chapterDisplayName: chapter.displayName,
-      invitedAt: invite.createdAt || serverTimestamp(),
-      joinedAt: serverTimestamp(),
-    }, { merge: true });
-
-    transaction.update(inviteRef, {
-      status: 'accepted',
-      acceptedByUid: uid,
-      acceptedAt: serverTimestamp(),
-    });
-
-    return {
-      chapterSlug: chapter.slug,
-    };
-  });
+  return { chapterSlug: chapter.slug };
 }
 
 export async function findDuplicateRushee(chapterId, firstName, lastName, phone) {

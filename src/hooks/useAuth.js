@@ -36,9 +36,10 @@ function clearPendingFlow() {
   localStorage.removeItem(PENDING_FLOW_KEY);
 }
 
-function buildActionCodeSettings() {
+function buildActionCodeSettings(flow) {
+  const params = flow ? `?flow=${encodeURIComponent(JSON.stringify(flow))}` : '';
   return {
-    url: `${window.location.origin}/finish-signin`,
+    url: `${window.location.origin}/finish-signin${params}`,
     handleCodeInApp: true,
   };
 }
@@ -111,7 +112,7 @@ export function AuthProvider({ children }) {
     async sendMagicLink(email, flow) {
       const normalizedEmail = email.trim().toLowerCase();
       setPendingFlow(normalizedEmail, flow);
-      await sendSignInLinkToEmail(auth, normalizedEmail, buildActionCodeSettings());
+      await sendSignInLinkToEmail(auth, normalizedEmail, buildActionCodeSettings(flow));
     },
     isMagicLink(url) {
       return isSignInWithEmailLink(auth, url);

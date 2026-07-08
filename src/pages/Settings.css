@@ -180,3 +180,71 @@
   font-size: 13px;
   word-break: break-word;
 }
+
+/* ── Join links card ── */
+
+.settings-join-hint {
+  margin: -8px 0 var(--space-lg);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.settings-join-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.settings-join-link-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-join-link-row:last-child {
+  border-bottom: none;
+}
+
+.settings-join-link-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-join-link-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.settings-regen-btn {
+  background: none;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-regen-btn:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.settings-regen-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (max-width: 540px) {
+  .settings-join-link-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

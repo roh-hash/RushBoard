@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react';
 import { updateProfile } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
-import { acceptChapterInvite, createChapterWithOwner, getChapterBySlug, listUserMemberships } from '../lib/firebase';
+import { acceptCodeJoin, createChapterWithOwner, getChapterBySlug, listUserMemberships } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
 import './Auth.css';
+
+function getFlowFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('flow');
+    return raw ? JSON.parse(decodeURIComponent(raw)) : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function FinishSignIn() {
   const navigate = useNavigate();
@@ -12,8 +22,10 @@ export default function FinishSignIn() {
     clearPendingFlow,
     isMagicLink,
     pendingEmail,
-    pendingFlow,
+    pendingFlow: storedFlow,
   } = useAuth();
+  // Fall back to URL-encoded flow when localStorage is empty (cross-device sign-in).
+  const pendingFlow = storedFlow || getFlowFromUrl();
   const [email, setEmail] = useState(pendingEmail || '');
   const [status, setStatus] = useState('init');
   const [message, setMessage] = useState('Verifying your sign-in link...');
@@ -61,14 +73,14 @@ export default function FinishSignIn() {
         return;
       }
 
-      if (pendingFlow?.type === 'joinChapter') {
+      if (pendingFlow?.type === 'joinWithCode') {
         const chapter = await getChapterBySlug(pendingFlow.chapterSlug);
         if (!chapter) {
-          throw new Error('Chapter not found for this invite.');
+          throw new Error('Chapter not found.');
         }
-        const result = await acceptChapterInvite({
+        const result = await acceptCodeJoin({
           chapterId: chapter.id,
-          inviteId: pendingFlow.inviteId,
+          code: pendingFlow.code,
           uid: signedInUser.uid,
           email: signedInUser.email || emailToUse,
           fullName: pendingFlow.fullName || signedInUser.displayName || '',

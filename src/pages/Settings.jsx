@@ -1,30 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createChapterInvite, chapterInvitesCol, chapterMembersCol, onSnapshot, orderBy, query, updateChapterProfile, updateChapterSettings } from '../lib/firebase';
+import { regenerateJoinCode, chapterMembersCol, onSnapshot, orderBy, query, updateChapterProfile, updateChapterSettings } from '../lib/firebase';
 import { useChapterContext } from '../hooks/useChapter';
 import './Settings.css';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { chapter, membership, settings } = useChapterContext();
+  const { chapter, settings } = useChapterContext();
   const [members, setMembers] = useState([]);
-  const [invites, setInvites] = useState([]);
 
   useEffect(() => {
-    const unsubscribeMembers = onSnapshot(
+    const unsubscribe = onSnapshot(
       query(chapterMembersCol(chapter.id), orderBy('fullName', 'asc')),
       (snap) => setMembers(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() }))),
     );
-
-    const unsubscribeInvites = onSnapshot(
-      query(chapterInvitesCol(chapter.id), orderBy('createdAt', 'desc')),
-      (snap) => setInvites(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() }))),
-    );
-
-    return () => {
-      unsubscribeMembers();
-      unsubscribeInvites();
-    };
+    return unsubscribe;
   }, [chapter.id]);
 
   return (
@@ -40,12 +30,7 @@ export default function Settings() {
           settings={settings}
         />
 
-        <InviteSettingsCard
-          key={`${chapter.id}:${membership.uid}`}
-          chapter={chapter}
-          membership={membership}
-          invites={invites}
-        />
+        <JoinLinksCard chapter={chapter} />
       </div>
 
       <section className="settings-card settings-card--full">
@@ -186,82 +171,81 @@ function IdentitySettingsCard({ chapter, settings }) {
   );
 }
 
-function InviteSettingsCard({ chapter, membership, invites }) {
-  const [inviteForm, setInviteForm] = useState({
-    fullName: '',
-    email: '',
-    role: 'member',
-  });
-  const [inviteMessage, setInviteMessage] = useState('');
+function JoinLinksCard({ chapter }) {
+  const [memberMsg, setMemberMsg] = useState('');
+  const [rushChairMsg, setRushChairMsg] = useState('');
+  const [regenerating, setRegenerating] = useState('');
 
-  async function handleCreateInvite(event) {
-    event.preventDefault();
-    const inviteId = await createChapterInvite(chapter.id, {
-      fullName: inviteForm.fullName,
-      email: inviteForm.email,
-      role: inviteForm.role,
-      createdByUid: membership.uid,
-      createdByName: membership.fullName,
-    });
+  function buildLink(code) {
+    return `${window.location.origin}/${chapter.slug}/join?code=${code}`;
+  }
 
-    const joinUrl = `${window.location.origin}/${chapter.slug}/join?invite=${inviteId}`;
-    await navigator.clipboard.writeText(joinUrl).catch(() => {});
-    setInviteMessage('Invite link copied to clipboard.');
-    setInviteForm({ fullName: '', email: '', role: 'member' });
-    setTimeout(() => setInviteMessage(''), 2500);
+  async function handleCopy(role) {
+    let code = role === 'rush_chair' ? chapter.rushChairJoinCode : chapter.memberJoinCode;
+    // Generate code if this is an older chapter that doesn't have one yet.
+    if (!code) {
+      code = await regenerateJoinCode(chapter.id, role);
+    }
+    await navigator.clipboard.writeText(buildLink(code)).catch(() => {});
+    const set = role === 'rush_chair' ? setRushChairMsg : setMemberMsg;
+    set('Link copied!');
+    setTimeout(() => set(''), 2500);
+  }
+
+  async function handleRegenerate(role) {
+    if (!window.confirm(`Regenerate? Anyone using the old ${role === 'rush_chair' ? 'rush chair' : 'member'} link will no longer be able to join.`)) return;
+    setRegenerating(role);
+    try {
+      const newCode = await regenerateJoinCode(chapter.id, role);
+      await navigator.clipboard.writeText(buildLink(newCode)).catch(() => {});
+      const set = role === 'rush_chair' ? setRushChairMsg : setMemberMsg;
+      set('Regenerated and copied!');
+      setTimeout(() => set(''), 3000);
+    } finally {
+      setRegenerating('');
+    }
   }
 
   return (
     <section className="settings-card">
-      <h2>Invite members</h2>
-      <form onSubmit={handleCreateInvite} className="settings-form">
-        <label className="settings-field">
-          <span>Full name</span>
-          <input
-            type="text"
-            value={inviteForm.fullName}
-            onChange={(event) => setInviteForm((current) => ({ ...current, fullName: event.target.value }))}
-            className="settings-input"
-          />
-        </label>
-        <label className="settings-field">
-          <span>Email</span>
-          <input
-            type="email"
-            value={inviteForm.email}
-            onChange={(event) => setInviteForm((current) => ({ ...current, email: event.target.value }))}
-            className="settings-input"
-          />
-        </label>
-        <label className="settings-field">
-          <span>Role</span>
-          <select
-            value={inviteForm.role}
-            onChange={(event) => setInviteForm((current) => ({ ...current, role: event.target.value }))}
-            className="settings-input"
-          >
-            <option value="member">Member</option>
-            <option value="rush_chair">Rush Chair</option>
-          </select>
-        </label>
-        {inviteMessage && <p className="settings-message">{inviteMessage}</p>}
-        <button type="submit" className="settings-submit">Create invite link</button>
-      </form>
+      <h2>Join links</h2>
+      <p className="settings-join-hint">Share these links with your chapter. Anyone with the link can join.</p>
 
-      <div className="settings-list">
-        <h3>Recent invites</h3>
-        {invites.length === 0 ? (
-          <p className="settings-empty">No invites yet.</p>
-        ) : (
-          invites.map((invite) => (
-            <div key={invite.id} className="settings-list-row">
-              <div>
-                <div className="settings-list-title">{invite.fullName || invite.email}</div>
-                <div className="settings-list-subtitle">{invite.role} · {invite.status}</div>
-              </div>
+      <div className="settings-join-links">
+        {[
+          {
+            role: 'member',
+            label: 'Member link',
+            subtitle: 'Roster, ratings, and comments',
+            msg: memberMsg,
+          },
+          {
+            role: 'rush_chair',
+            label: 'Rush chair link',
+            subtitle: 'Full access — QR, bids, settings',
+            msg: rushChairMsg,
+          },
+        ].map(({ role, label, subtitle, msg }) => (
+          <div key={role} className="settings-join-link-row">
+            <div className="settings-join-link-info">
+              <div className="settings-list-title">{label}</div>
+              <div className="settings-list-subtitle">{subtitle}</div>
+              {msg && <p className="settings-message">{msg}</p>}
             </div>
-          ))
-        )}
+            <div className="settings-join-link-actions">
+              <button onClick={() => handleCopy(role)} className="settings-submit">
+                Copy link
+              </button>
+              <button
+                onClick={() => handleRegenerate(role)}
+                disabled={!!regenerating}
+                className="settings-regen-btn"
+              >
+                {regenerating === role ? 'Regenerating...' : 'Regenerate'}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

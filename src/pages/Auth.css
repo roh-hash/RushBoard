@@ -357,6 +357,18 @@
   color: var(--text-secondary);
 }
 
+.auth-spam-note {
+  margin-top: 8px !important;
+  font-size: 13px;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.auth-signed-in-note {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
 .auth-footnote {
   margin-top: var(--space-xl);
   color: var(--text-secondary);
