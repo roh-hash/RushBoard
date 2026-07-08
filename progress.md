@@ -6,13 +6,13 @@ Running log of project state. Read at session start, update at session end.
 
 **Phase:** Live in production. MVP shipped (see "Shipped surface" in CLAUDE.md).
 **Last session:** Security hardening shipped (join codes in private subcollection, rules-validated joins, storage limits), bid columns renamed to Waitlist/Reject, landing page redesigned, member management + rushee delete added.
-**Next up:** Enforce App Check in the Firebase console (client side is live; see backlog), then triage rush-season feedback.
+**Next up:** Register the localhost App Check debug token (run `npm run dev`, copy token from browser console, add in Firebase console → App Check → Apps → Manage debug tokens), then triage rush-season feedback.
 
 ## Backlog
 
 Prioritize from real usage. Deferred-feature guardrail lives in CLAUDE.md — ask before starting one.
 
-- [ ] **App Check — enforce it:** client side is done (key in `.env` + Netlify, live bundle mints tokens since 2026-07-08 deploy). Remaining, console-only: confirm app registered with reCAPTCHA secret, check verified-request metrics, add a localhost debug token (`self.FIREBASE_APPCHECK_DEBUG_TOKEN = true` in dev), then click Enforce for Firestore + Storage at a quiet hour (stale tabs lose access until refreshed).
+- [x] **App Check — enforced 2026-07-08** for Firestore + Storage (secret key registered). Verified post-enforcement: production Firestore Listen returns 200 from an anonymous browser. Remaining: register the localhost debug token (see "Next up").
 - [ ] Rules test suite — needs `@firebase/rules-unit-testing` + emulator; **blocked on Java** (emulator requires JRE, not installed)
 - [ ] ~~Duplicate rushee merge UI~~ — decided against; delete button on Profile is sufficient
 - [ ] Move `recalcAvgRating` to a Cloud Function trigger

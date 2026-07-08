@@ -54,6 +54,12 @@ setPersistence(auth, browserLocalPersistence).catch(() => {
 const appCheckSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 if (typeof window !== 'undefined' && appCheckSiteKey) {
+  if (import.meta.env.DEV) {
+    // App Check is enforced in production; localhost can't pass reCAPTCHA.
+    // This prints a debug token to the console on first run — register it in
+    // Firebase console → App Check → Apps → Manage debug tokens.
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
   try {
     initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(appCheckSiteKey),

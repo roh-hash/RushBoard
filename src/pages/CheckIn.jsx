@@ -9,7 +9,7 @@ const YEAR_OPTIONS = ['Freshman', 'Sophomore', 'Other'];
 
 export default function CheckIn() {
   const { nightId } = useParams();
-  const { chapter, settings } = useChapterContext();
+  const { chapter, settings, loading: chapterLoading } = useChapterContext();
   const [night, setNight] = useState(null);
   const [nightLoading, setNightLoading] = useState(true);
   const [form, setForm] = useState({
@@ -124,7 +124,9 @@ export default function CheckIn() {
     }
   }
 
-  if (nightLoading) {
+  // nightLoading only resolves once a chapter is found, so gate it on chapter
+  // to avoid an infinite spinner on URLs with a bad chapter slug.
+  if (chapterLoading || (chapter && nightLoading)) {
     return <div className="checkin-page"><p>Loading check-in...</p></div>;
   }
 
