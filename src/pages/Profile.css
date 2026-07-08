@@ -271,13 +271,13 @@
   color: #2e6e2e;
 }
 
-.profile-bid-btn--table-active {
+.profile-bid-btn--waitlist-active {
   background: #fef8ec;
   border-color: #d4960a;
   color: #8a6200;
 }
 
-.profile-bid-btn--fade-active {
+.profile-bid-btn--reject-active {
   background: #fdeeee;
   border-color: #d45050;
   color: #a83030;

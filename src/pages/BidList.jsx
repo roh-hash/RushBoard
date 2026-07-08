@@ -5,8 +5,8 @@ import { useChapterContext } from '../hooks/useChapter';
 import { useRushees } from '../hooks/useRushees';
 import './BidList.css';
 
-const COLUMNS = ['bid', 'table', 'fade'];
-const COLUMN_LABELS = { bid: 'Bid', table: 'Table', fade: 'Fade' };
+const COLUMNS = ['bid', 'waitlist', 'reject'];
+const COLUMN_LABELS = { bid: 'Bid', waitlist: 'Waitlist', reject: 'Reject' };
 
 export default function BidList() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function BidList() {
 
   const uncategorized = useMemo(() => rushees.filter((rushee) => !rushee.bidStatus), [rushees]);
   const columns = useMemo(() => {
-    const nextColumns = { bid: [], table: [], fade: [] };
+    const nextColumns = { bid: [], waitlist: [], reject: [] };
     rushees.forEach((rushee) => {
       if (rushee.bidStatus && nextColumns[rushee.bidStatus]) {
         nextColumns[rushee.bidStatus].push(rushee);

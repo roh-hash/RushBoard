@@ -9,7 +9,19 @@ export function useRushees(chapterId) {
     if (!chapterId) return undefined;
 
     const unsubscribe = onSnapshot(chapterRusheesCol(chapterId), (snap) => {
-      setRushees(snap.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
+      setRushees(snap.docs.map((entry) => {
+        const data = entry.data();
+        // Normalize legacy bid status values stored before the Table→Waitlist/Fade→Reject rename.
+        const STATUS_MAP = { table: 'waitlist', fade: 'reject' };
+        if (data.bidStatus) data.bidStatus = STATUS_MAP[data.bidStatus] ?? data.bidStatus;
+        if (data.lastBidChange?.movedTo) {
+          data.lastBidChange = {
+            ...data.lastBidChange,
+            movedTo: STATUS_MAP[data.lastBidChange.movedTo] ?? data.lastBidChange.movedTo,
+          };
+        }
+        return { id: entry.id, ...data };
+      }));
       setLoadedChapterId(chapterId);
     });
 

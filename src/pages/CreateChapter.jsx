@@ -90,6 +90,7 @@ export default function CreateChapter() {
           <div className="auth-success">
             <h2>Finish setup from your email</h2>
             <p>We sent a secure setup link to {sentTo}. Open it on this device to create the chapter.</p>
+            <p className="auth-spam-note">If you don't see it, check your spam folder.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="auth-form">

@@ -143,11 +143,11 @@
   background: #f5faf5;
 }
 
-.bidlist-col--table {
+.bidlist-col--waitlist {
   background: #fdf8ef;
 }
 
-.bidlist-col--fade {
+.bidlist-col--reject {
   background: #fcf2f2;
 }
 
@@ -314,20 +314,20 @@
   background: #edf7ed;
 }
 
-.bidlist-assign-opt--table {
+.bidlist-assign-opt--waitlist {
   border-color: #d4960a;
   color: #8a6200;
 }
 
-.bidlist-assign-opt--table:hover {
+.bidlist-assign-opt--waitlist:hover {
   background: #fef8ec;
 }
 
-.bidlist-assign-opt--fade {
+.bidlist-assign-opt--reject {
   border-color: #d45050;
   color: #a83030;
 }
 
-.bidlist-assign-opt--fade:hover {
+.bidlist-assign-opt--reject:hover {
   background: #fdeeee;
 }

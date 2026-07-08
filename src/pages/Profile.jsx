@@ -140,8 +140,8 @@ export default function Profile() {
           <div className="profile-bid-row">
             {[
               { status: 'bid', label: 'Bid' },
-              { status: 'table', label: 'Table' },
-              { status: 'fade', label: 'Fade' },
+              { status: 'waitlist', label: 'Waitlist' },
+              { status: 'reject', label: 'Reject' },
             ].map(({ status, label }) => (
               <button
                 key={status}

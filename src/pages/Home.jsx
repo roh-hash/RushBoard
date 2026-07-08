@@ -37,7 +37,7 @@ export default function Home() {
             <ul className="home-feature-list">
               <li>Rushees scan a QR code to check in — no clipboards, no lost sign-in sheets.</li>
               <li>Every brother rates and comments in real time, so bid night decisions are backed by the whole chapter.</li>
-              <li>Drag rushees across your Bid, Watch List, and Fade columns as the night unfolds.</li>
+              <li>Drag rushees across your Bid, Waitlist, and Reject columns as the night unfolds.</li>
               <li>Track who's been called, who accepted, and who needs more time — all in one place.</li>
             </ul>
           </div>
