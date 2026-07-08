@@ -5,17 +5,16 @@ Running log of project state. Read at session start, update at session end.
 ## Current status
 
 **Phase:** Live in production. MVP shipped (see "Shipped surface" in CLAUDE.md).
-**Last session:** Committed join-code invite system, bid tracker stats, and post-launch doc reset.
-**Next up:** Harden Firestore rules for the join-code model (see backlog), then triage rush-season feedback.
+**Last session:** Security hardening shipped (join codes in private subcollection, rules-validated joins, storage limits), bid columns renamed to Waitlist/Reject, landing page redesigned, member management + rushee delete added.
+**Next up:** Enforce App Check in the Firebase console (client side is live; see backlog), then triage rush-season feedback.
 
 ## Backlog
 
 Prioritize from real usage. Deferred-feature guardrail lives in CLAUDE.md — ask before starting one.
 
-- [ ] **App Check:** `VITE_RECAPTCHA_SITE_KEY` is not set — App Check is inactive. Add key to `.env` + Netlify env vars, then enable enforcement in Firebase console for Firestore and Storage.
-- [ ] Member management UI in Settings (remove member, change role) — in progress
+- [ ] **App Check — enforce it:** client side is done (key in `.env` + Netlify, live bundle mints tokens since 2026-07-08 deploy). Remaining, console-only: confirm app registered with reCAPTCHA secret, check verified-request metrics, add a localhost debug token (`self.FIREBASE_APPCHECK_DEBUG_TOKEN = true` in dev), then click Enforce for Firestore + Storage at a quiet hour (stale tabs lose access until refreshed).
 - [ ] Rules test suite — needs `@firebase/rules-unit-testing` + emulator; **blocked on Java** (emulator requires JRE, not installed)
-- [ ] Duplicate rushee full merge UI (consolidate two docs + subcollections) — delete button on Profile unblocks the immediate gap
+- [ ] ~~Duplicate rushee merge UI~~ — decided against; delete button on Profile is sufficient
 - [ ] Move `recalcAvgRating` to a Cloud Function trigger
 - [ ] Deferred (ask before starting): pledge class roster, CSV export, full filters, PWA, restyle, code-splitting
 
