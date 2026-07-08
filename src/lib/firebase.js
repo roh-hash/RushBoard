@@ -467,6 +467,18 @@ export async function clearBidStatus(chapterId, rusheeId, member) {
   });
 }
 
+export async function removeMember(chapterId, uid) {
+  await deleteDoc(doc(chapterMembersCol(chapterId), uid));
+}
+
+export async function updateMemberRole(chapterId, uid, newRole, actingMemberUid) {
+  await updateDoc(doc(chapterMembersCol(chapterId), uid), {
+    role: newRole,
+    updatedAt: serverTimestamp(),
+    updatedByUid: actingMemberUid,
+  });
+}
+
 export async function setCallStatus(chapterId, rusheeId, { called, response }, member) {
   await updateDoc(doc(chapterRusheesCol(chapterId), rusheeId), {
     called: !!called,

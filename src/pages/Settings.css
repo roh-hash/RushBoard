@@ -181,6 +181,64 @@
   word-break: break-word;
 }
 
+/* ── Member management actions ── */
+
+.settings-member-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.settings-member-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.settings-member-btn {
+  background: none;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  padding: 4px 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  transition: all 0.15s var(--ease-out);
+  line-height: 1.5;
+}
+
+.settings-member-btn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.settings-member-btn:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.settings-member-btn--remove {
+  border-color: rgba(192, 93, 62, 0.22);
+  color: var(--accent-soft);
+}
+
+.settings-member-btn--remove:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 480px) {
+  .settings-member-right {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
 /* ── Join links card ── */
 
 .settings-join-hint {

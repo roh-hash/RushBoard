@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { regenerateJoinCode, chapterJoinCodesDoc, chapterMembersCol, onSnapshot, orderBy, query, updateChapterProfile, updateChapterSettings } from '../lib/firebase';
+import { regenerateJoinCode, chapterJoinCodesDoc, chapterMembersCol, onSnapshot, orderBy, query, removeMember, updateChapterProfile, updateChapterSettings, updateMemberRole } from '../lib/firebase';
 import { useChapterContext } from '../hooks/useChapter';
 import './Settings.css';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { chapter, settings } = useChapterContext();
+  const { chapter, settings, membership } = useChapterContext();
   const [members, setMembers] = useState([]);
 
   useEffect(() => {
@@ -33,20 +33,7 @@ export default function Settings() {
         <JoinLinksCard chapter={chapter} />
       </div>
 
-      <section className="settings-card settings-card--full">
-        <h2>Active members</h2>
-        <div className="settings-list settings-list--grid">
-          {members.map((memberEntry) => (
-            <div key={memberEntry.id} className="settings-list-row">
-              <div>
-                <div className="settings-list-title">{memberEntry.fullName || memberEntry.email}</div>
-                <div className="settings-list-subtitle">{memberEntry.email}</div>
-              </div>
-              <span className="settings-role">{memberEntry.role === 'rush_chair' ? 'Rush Chair' : 'Member'}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      <MembersCard chapter={chapter} members={members} currentMemberUid={membership?.uid} />
     </div>
   );
 }
@@ -253,6 +240,78 @@ function JoinLinksCard({ chapter }) {
             </div>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function MembersCard({ chapter, members, currentMemberUid }) {
+  const [pendingUid, setPendingUid] = useState(null);
+  const rushChairCount = members.filter((m) => m.role === 'rush_chair').length;
+
+  const handleRoleChange = useCallback(async (memberEntry) => {
+    const newRole = memberEntry.role === 'rush_chair' ? 'member' : 'rush_chair';
+    setPendingUid(memberEntry.uid);
+    try {
+      await updateMemberRole(chapter.id, memberEntry.uid, newRole, currentMemberUid);
+    } finally {
+      setPendingUid(null);
+    }
+  }, [chapter.id, currentMemberUid]);
+
+  const handleRemove = useCallback(async (memberEntry) => {
+    if (!window.confirm(`Remove ${memberEntry.fullName || memberEntry.email} from this chapter?`)) return;
+    setPendingUid(memberEntry.uid);
+    try {
+      await removeMember(chapter.id, memberEntry.uid);
+    } finally {
+      setPendingUid(null);
+    }
+  }, [chapter.id]);
+
+  return (
+    <section className="settings-card settings-card--full">
+      <h2>Active members</h2>
+      <div className="settings-list settings-list--grid">
+        {members.map((memberEntry) => {
+          const isSelf = memberEntry.uid === currentMemberUid;
+          const isOnlyRushChair = memberEntry.role === 'rush_chair' && rushChairCount === 1;
+          const isPending = pendingUid === memberEntry.uid;
+
+          return (
+            <div key={memberEntry.id} className="settings-list-row">
+              <div>
+                <div className="settings-list-title">{memberEntry.fullName || memberEntry.email}</div>
+                <div className="settings-list-subtitle">{memberEntry.email}</div>
+              </div>
+              <div className="settings-member-right">
+                <span className="settings-role">
+                  {memberEntry.role === 'rush_chair' ? 'Rush Chair' : 'Member'}
+                </span>
+                {!isSelf && (
+                  <div className="settings-member-actions">
+                    <button
+                      className="settings-member-btn"
+                      onClick={() => handleRoleChange(memberEntry)}
+                      disabled={isPending || isOnlyRushChair}
+                      title={isOnlyRushChair ? "Cannot change the only rush chair's role" : undefined}
+                    >
+                      {memberEntry.role === 'rush_chair' ? '→ Member' : '→ Rush Chair'}
+                    </button>
+                    <button
+                      className="settings-member-btn settings-member-btn--remove"
+                      onClick={() => handleRemove(memberEntry)}
+                      disabled={isPending || isOnlyRushChair}
+                      title={isOnlyRushChair ? 'Cannot remove the only rush chair' : undefined}
+                    >
+                      {isPending ? '···' : 'Remove'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

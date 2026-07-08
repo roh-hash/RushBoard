@@ -12,22 +12,12 @@ Running log of project state. Read at session start, update at session end.
 
 Prioritize from real usage. Deferred-feature guardrail lives in CLAUDE.md — ask before starting one.
 
-- [ ] **DEPLOY NEEDED:** Rules and code are ready but not yet deployed — see deploy steps below.
-- [ ] **Workstream 3:** Add spam-note to CreateChapter.jsx sent-confirmation (one line)
-- [ ] **Workstream 4:** Rename bid columns Table→Waitlist, Fade→Reject (with backward-compat mapping for stored values)
-- [ ] **Workstream 5:** Improve landing page (needs /frontend-design skill)
-- [ ] Duplicate rushee merging UI in roster (gap left by removing client-side duplicate detection from public check-in)
+- [ ] **App Check:** `VITE_RECAPTCHA_SITE_KEY` is not set — App Check is inactive. Add key to `.env` + Netlify env vars, then enable enforcement in Firebase console for Firestore and Storage.
+- [ ] Member management UI in Settings (remove member, change role) — in progress
+- [ ] Duplicate rushee merging UI in roster (gap from removing client-side dedupe in public check-in)
+- [ ] Rules test suite — needs `@firebase/rules-unit-testing` + emulator (ask before installing)
 - [ ] Move `recalcAvgRating` to a Cloud Function trigger
-- [ ] App Check enforcement — verify VITE_RECAPTCHA_SITE_KEY is set in Netlify env AND enforcement is on in Firebase console
-- [ ] Member management UI in Settings (remove member, change role)
-- [ ] Deferred features (in CLAUDE.md guardrails): pledge class roster, CSV export, full filters, PWA, restyle, code-splitting
-
-## Deploy steps for WS1+2 changes (do in this order)
-
-1. `firebase deploy --only firestore:rules,storage` — deploy rules first (see learning.md: rules before code)
-2. `git push` — Netlify auto-deploys; old join links are immediately invalid
-3. Open Settings for each active chapter → click **Copy link** for both Member and Rush Chair links (this creates the `private/joinCodes` doc and gives you new URLs with `&role=`)
-4. Share new links with your chapter members
+- [ ] Deferred (ask before starting): pledge class roster, CSV export, full filters, PWA, restyle, code-splitting
 
 ## Session log
 
