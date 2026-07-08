@@ -4,7 +4,8 @@ Running log of project state. Read at session start, update at session end.
 
 ## Current status
 
-**Phase:** Live in production. MVP shipped (see "Shipped surface" in CLAUDE.md).
+**Phase:** Live in production, no real chapters onboarded yet. MVP shipped (see "Shipped surface" in CLAUDE.md).
+**2026-07-08:** All Firestore data wiped (`firebase firestore:delete --all-collections`) — test chapters removed for a clean slate. Storage test photos still need manual deletion (console → Storage → `chapters/` folder). Auth users left intact.
 **Last session:** Security hardening shipped (join codes in private subcollection, rules-validated joins, storage limits), bid columns renamed to Waitlist/Reject, landing page redesigned, member management + rushee delete added.
 **Next up:** Register the localhost App Check debug token (run `npm run dev`, copy token from browser console, add in Firebase console → App Check → Apps → Manage debug tokens), then triage rush-season feedback.
 

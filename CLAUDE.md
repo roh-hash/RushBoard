@@ -2,7 +2,7 @@
 
 Multi-tenant web app for managing fraternity rush. Each chapter gets its own dashboard, roster, bid board, and QR check-in — all live across every phone in the room.
 
-**Live in production.** Real chapters use this during rush season. Netlify auto-deploys every push to `main`, so pushing is shipping: `npm run build` and `npm run lint` must pass before any task is done, and auth/check-in changes need real-device testing before merge.
+**Live in production, awaiting first real chapters.** Netlify auto-deploys every push to `main`, so pushing is shipping: `npm run build` and `npm run lint` must pass before any task is done, and auth/check-in changes need real-device testing before merge.
 
 ## Commands
 
