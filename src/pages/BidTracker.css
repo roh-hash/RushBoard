@@ -57,6 +57,114 @@
   color: var(--text-primary);
 }
 
+/* ── Stats strip ── */
+
+.tracker-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: var(--space-lg);
+}
+
+@media (max-width: 540px) {
+  .tracker-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .tracker-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.tracker-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.tracker-stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.tracker-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+
+.tracker-stat--total {
+  border-color: var(--accent-soft, var(--border-subtle));
+}
+
+.tracker-stat--total .tracker-stat-value {
+  color: var(--accent);
+}
+
+.tracker-stat--total .tracker-stat-label {
+  color: var(--accent);
+}
+
+.tracker-stat--not-called {
+  border-color: #d4a95440;
+}
+
+.tracker-stat--not-called .tracker-stat-value {
+  color: #8a6d2b;
+}
+
+.tracker-stat--not-called .tracker-stat-label {
+  color: #8a6d2b;
+}
+
+.tracker-stat--accepted {
+  border-color: #5a9e5a40;
+}
+
+.tracker-stat--accepted .tracker-stat-value {
+  color: #2e6e2e;
+}
+
+.tracker-stat--accepted .tracker-stat-label {
+  color: #2e6e2e;
+}
+
+.tracker-stat--needs-time {
+  border-color: #8a5eb040;
+}
+
+.tracker-stat--needs-time .tracker-stat-value {
+  color: #5a2d82;
+}
+
+.tracker-stat--needs-time .tracker-stat-label {
+  color: #5a2d82;
+}
+
+.tracker-stat--declined {
+  border-color: #d4505040;
+}
+
+.tracker-stat--declined .tracker-stat-value {
+  color: #a83030;
+}
+
+.tracker-stat--declined .tracker-stat-label {
+  color: #a83030;
+}
+
 .tracker-count {
   color: var(--text-secondary);
   font-size: 13px;

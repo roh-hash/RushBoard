@@ -21,6 +21,15 @@ export default function BidTracker() {
     [rushees],
   );
 
+  const stats = useMemo(() => {
+    const total = bidRushees.length;
+    const notCalled = bidRushees.filter((r) => !r.called).length;
+    const accepted = bidRushees.filter((r) => r.callResponse === 'accepted').length;
+    const needsTime = bidRushees.filter((r) => r.callResponse === 'needs_time').length;
+    const declined = bidRushees.filter((r) => r.callResponse === 'declined').length;
+    return { total, notCalled, accepted, needsTime, declined };
+  }, [bidRushees]);
+
   function handleCalledChange(rushee) {
     setCallStatus(
       chapter.id,
@@ -51,9 +60,28 @@ export default function BidTracker() {
         <button onClick={() => navigate(`/${chapter.slug}/dashboard`)} className="tracker-nav-btn">Dashboard</button>
         <button onClick={() => navigate(`/${chapter.slug}/bids`)} className="tracker-nav-btn">Bid List</button>
       </div>
-      <p className="tracker-count">
-        {bidRushees.length} rushee{bidRushees.length !== 1 ? 's' : ''} with a bid
-      </p>
+      <div className="tracker-stats">
+        <div className="tracker-stat tracker-stat--total">
+          <span className="tracker-stat-value">{stats.total}</span>
+          <span className="tracker-stat-label">Total bids</span>
+        </div>
+        <div className="tracker-stat tracker-stat--accepted">
+          <span className="tracker-stat-value">{stats.accepted}</span>
+          <span className="tracker-stat-label">Accepted</span>
+        </div>
+        <div className="tracker-stat tracker-stat--needs-time">
+          <span className="tracker-stat-value">{stats.needsTime}</span>
+          <span className="tracker-stat-label">Needs time</span>
+        </div>
+        <div className="tracker-stat tracker-stat--declined">
+          <span className="tracker-stat-value">{stats.declined}</span>
+          <span className="tracker-stat-label">Declined</span>
+        </div>
+        <div className="tracker-stat tracker-stat--not-called">
+          <span className="tracker-stat-value">{stats.notCalled}</span>
+          <span className="tracker-stat-label">Not called</span>
+        </div>
+      </div>
 
       {bidRushees.length === 0 ? (
         <p className="tracker-empty">No rushees in the Bid column yet.</p>
