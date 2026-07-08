@@ -95,8 +95,12 @@ service cloud.firestore {
 
       // Join codes are rush-chair-only; the client never needs to read them directly —
       // validation happens server-side via rules get() on member create.
+      // Create must also allow the chapter-creation transaction, where the owner's
+      // member doc doesn't exist yet (same pattern as settings below).
       match /private/joinCodes {
-        allow read, write: if isRushChair(chapterId);
+        allow read, update: if isRushChair(chapterId);
+        allow create: if isRushChair(chapterId) || isCreatingOwnChapter(chapterId);
+        allow delete: if false;
       }
 
       match /settings/{docId} {
