@@ -1,134 +1,47 @@
 # Progress
 
-Running log of project state. Read this at the start of every session. Update it at the end.
+Running log of project state. Read at session start, update at session end.
 
 ## Current status
 
-**Phase:** Bug-fix pass complete. Ready for Firebase console config + end-to-end testing.
-**Last session:** Audited entire codebase, fixed critical bugs, security issues, and stale docs.
-**Next up:** Configure Firebase console/auth domains/rules for the new flow, then run full end-to-end testing with real email links and invite flows.
+**Phase:** Live in production. MVP shipped (see "Shipped surface" in CLAUDE.md).
+**Last session:** Committed join-code invite system, bid tracker stats, and post-launch doc reset.
+**Next up:** Harden Firestore rules for the join-code model (see backlog), then triage rush-season feedback.
 
-## MVP checklist
+## Backlog
 
-Work these in order. Check items off as completed. Don't skip ahead.
+Prioritize from real usage. Deferred-feature guardrail lives in CLAUDE.md — ask before starting one.
 
-### Setup
-- [x] Initialize Vite + React project in this directory
-- [x] Install core deps: `firebase`, `react-router-dom`, `qrcode`
-- [x] Create Firebase project, enable Firestore + Storage
-- [x] Add Firebase config to `src/lib/firebase.js` (use env vars)
-- [x] Set up basic routing in `App.jsx`
-- [ ] Netlify deploy working from `main` branch
-
-### Auth + Login
-- [x] Replace passcode login with Firebase email-link sign-in
-- [x] Persist auth with Firebase Auth instead of localStorage-only passcodes
-- [x] Redirect signed-in users to their chapter dashboard
-- [x] Show active member name in dashboard header
-
-### Rushee check-in
-- [x] Public route `/:chapterSlug/checkin/:nightId`
-- [x] Form: name, hometown, phone, major, year, identity tag, selfie
-- [x] Client-side image compression (target <200KB)
-- [x] Upload photo to Firebase Storage
-- [x] Write rushee doc under chapter-scoped Firestore path with `nightId` in `attendedNights` array
-- [x] Duplicate detection by name OR phone inside the same chapter
-- [x] Confirmation screen with photo + name
-
-### Dashboard roster
-- [x] Live-updating grid of rushee cards (`onSnapshot`)
-- [x] Card shows: photo, name, hometown, tag badge, avg score, rating count, night count
-- [x] Default sort: avg rating high to low
-- [x] Search by name
-- [x] Tap card → chapter-scoped rushee profile page
-- [x] Dashboard header uses fraternity + chapter name + "Rush"
-
-### Rushee profile
-- [x] Full details view
-- [x] Star rating (1–5), stored as separate `ratings` subcollection doc keyed by member uid
-- [x] Comment section — each comment shows member name + timestamp
-- [x] "Talked to them" toggle keyed by member uid
-- [x] List of all ratings with member names + scores, most recent first
-
-### QR codes page
-- [x] View list of existing rush night QRs (rush-chair-only route)
-- [x] Generate new QR for the active chapter
-- [x] Each QR links to `/:chapterSlug/checkin/:nightId`
-- [x] Display two shareable links (dashboard + check-in) with copy buttons
-- [x] Download QR as PNG
-
-### Bid list
-- [x] Kanban board: Bid / Watch List / Pass columns
-- [x] Drag-drop rushees between columns (live-updating)
-- [x] Log `{ memberName, timestamp, movedTo }` on every move
-
-### Chapters + Settings
-- [x] `Start using RushBoard` launches chapter onboarding
-- [x] Create chapter with fraternity name + charter name + initial rush chair
-- [x] Add chapter-scoped routes and chapter lookup by slug
-- [x] Add chapter settings page for rushee tags and invite links
-- [x] Add member/rush-chair invite flow by email link
-- [x] Add Firebase rules/config scaffolding files for chapter model
-
-## Deferred (post-MVP)
-
-- ~~Bid tracker (accepted/declined/etc. logging)~~ — shipped, see /bid-tracker route
-- Pledge class roster
-- CSV export
-- Full filter set (by night, by tag, unrated-by-me, not-talked-to)
-- PWA manifest + service worker
-- Dark navy + gold styling, glassy cards, bottom nav bar
-- "Unrated by me" and "Not talked to" filters
+- [ ] **Security — join codes are world-readable:** `chapters/{id}` has `allow read: if true`, and join codes now live on the chapter doc, so anyone can read `rushChairJoinCode` for any chapter. Move codes to a rush-chair-only subcollection or validate joins server-side.
+- [ ] **Security — member create rule doesn't check the code:** `members/{uid}` allows any signed-in user to create their own doc with any role; the join-code check is client-side only. Rules should validate the code (or joins should go through a trusted backend).
+- [ ] Remove stale `invites/{inviteId}` block from firestore.rules (invite system replaced by join codes) and deploy rules
+- [ ] Tighten Storage rules once photo upload moves behind a trusted backend
+- [ ] Move `recalcAvgRating` to a Cloud Function trigger
+- [ ] Deferred features (in CLAUDE.md guardrails): pledge class roster, CSV export, full filters, PWA, restyle, code-splitting
 
 ## Session log
 
-Append a short entry each session. Format:
+Append a short entry each session, newest at the bottom:
 
 ```
 ### YYYY-MM-DD — <short title>
 - What got done (1–3 bullets)
 - Decisions made
-- What's blocked or unclear
 - Next session starts with: <one line>
 ```
 
-### 2026-04-16 — Project scaffolding
-- Created CLAUDE.md, progress.md, learning.md.
-- Stack locked in: Vite + React, Firebase, Netlify.
-- Next session starts with: run `npm create vite@latest` in project root and pick React (JavaScript, not TypeScript for MVP speed).
+### 2026-04-16 — MVP build (condensed)
 
-### 2026-04-16 — Differentiated Rush Chair and Member logins
-- Added radio buttons in Login.jsx for Rush Chair (passcode "rush2026") and Member (env VITE_MEMBER_PASSCODE)
-- Updated useAuth to store isRushChair flag
-- Hid "New Rush Night" and "Bid List" buttons in Dashboard for members
-- Hid bid status section in Profile for members
-- Replaced PinGate with RushChairRoute in App.jsx for /qr, /bids, /bid-tracker
-- Build passes without errors.
-- Next session starts with: Netlify deploy setup.
+Full detail in git history (`d174647` and earlier progress.md versions). Summary:
+- Scaffolded Vite + React + Firebase; shipped all MVP features: email-link auth, chapter onboarding/settings/invites, public check-in with photo compression + dedupe, live roster, rushee profile (ratings/comments/talked-to/bid status), QR page, bid kanban, bid tracker.
+- Refactored from shared-passcode auth to multi-tenant chapter model with Firebase Auth email links.
+- Audit pass fixed crashes (JoinChapter provider, FinishSignIn effect loop), security holes (invite update rule), and consistency issues (serverTimestamp everywhere, transactional recalcAvgRating).
 
-### 2026-04-16 — Created home page with separate login routes
-- Created Home.jsx landing page with buttons for Member Login, Rush Chair Login, and Start using RushBoard (disabled).
-- Created MemberLogin.jsx and RushChairLogin.jsx as dedicated login pages.
-- Updated App.jsx routes: "/" -> Home, "/member-login" -> MemberLogin, "/rush-chair-login" -> RushChairLogin.
-- Each login page has a back button to home page.
-- Build passes without errors.
-- Next session starts with: Test home page and login flow.
-
-### 2026-04-16 — Refactored RushBoard into a chapter-scoped app
-- Replaced shared passcode auth with Firebase email-link auth and membership lookup via Firestore.
-- Moved the app to chapter-scoped routes and Firestore collections, added onboarding, invites, settings, and chapter-branded dashboard/check-in flows.
-- Added Firebase rules/config scaffolding (`firebase.json`, `firestore.rules`, `storage.rules`) to match the new multi-tenant structure.
-- Build and lint pass locally; real email-link onboarding still needs Firebase console configuration and end-to-end validation.
-- Next session starts with: wire the Firebase console settings/auth domains, then test onboarding, invite acceptance, and public check-in against a live project.
-
-### 2026-04-16 — Codebase audit and bug fixes
-- Fixed crash: JoinChapter route was missing ChapterProvider wrapper (PublicChapterRoute).
-- Fixed crash: FinishSignIn useEffect re-fired on every keystroke due to `email` in deps; rewrote to use explicit submit.
-- Security: tightened invite update rule to require matching email, not just any signed-in user.
-- Security: clipboard.writeText calls now have .catch() for non-HTTPS/permission-denied contexts.
-- Fixed: setBidStatus, clearBidStatus, setCallStatus now use serverTimestamp() instead of client Date.
-- Fixed: recalcAvgRating now runs inside a Firestore transaction to prevent race conditions.
-- Fixed: createRushNight in QRCodes now has try/catch error handling.
-- Cleaned up: removed dead VITE_CHAPTER_PASSCODE / VITE_MEMBER_PASSCODE from .env and .env.example.
-- Rewrote CLAUDE.md to reflect the current multi-tenant email-link auth model.
-- Next session starts with: Firebase console config, then end-to-end testing.
+### 2026-07-08 — Post-launch doc reset
+- Rewrote CLAUDE.md as a lean production-phase constitution; removed stale spec.md reference and build-phase rituals.
+- Condensed progress.md (MVP checklist retired — everything shipped; history preserved in git).
+- Renamed `.claude/commands/frontend-design` → `frontend-design.md` so the command actually loads.
+- Decision: keep learning.md as-is (append-only, read on demand); deferred-feature list lives only in CLAUDE.md to avoid duplication.
+- Committed the pending working-tree changes: join-code invite system (replaces per-email invites), bid tracker stats strip, QR/sign-in UX tweaks. Cleaned up dead invite helpers that failed lint.
+- Flagged two rules gaps introduced by the join-code model (world-readable codes; no server-side code check on member create) — top of backlog.
+- Next session starts with: harden firestore.rules for join codes.

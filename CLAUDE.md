@@ -2,122 +2,75 @@
 
 Multi-tenant web app for managing fraternity rush. Each chapter gets its own dashboard, roster, bid board, and QR check-in — all live across every phone in the room.
 
-## Project state
-
-**Phase:** MVP feature-complete including bid tracker. Now entering frontend design/polish phase.
-**Scope right now:** production-grade UI styling across all pages, Firebase console configuration, end-to-end testing of email-link auth and invite flows.
-
-## Before you start any task
-
-1. Read `progress.md` to see where we left off and what's next.
-2. Read `learning.md` to avoid repeating solved problems.
-3. If the task is non-trivial, use plan mode (Shift+Tab twice) and show me the plan before writing code.
-
-## After you finish a task
-
-1. Update `progress.md` — mark what's done, note what's next, log any decisions made.
-2. Append to `learning.md` if you hit a gotcha, made a non-obvious choice, or found a pattern worth remembering.
-3. Run `/compact` before starting an unrelated task. Run `/clear` when fully switching contexts.
-
-## Stack
-
-- **Frontend:** React + Vite, plain CSS for now (Tailwind later if needed)
-- **Backend / DB / Auth / Storage:** Firebase (Firestore, Storage, Firebase Auth with email-link sign-in)
-- **Hosting:** Netlify
-- **QR codes:** `qrcode` npm package, generated client-side
-- **Image compression:** `browser-image-compression` npm package, client-side
-- **CSV export:** client-side, no library needed (deferred)
-
-## Auth model (multi-tenant, email-link)
-
-- **Firebase Auth email-link sign-in** — no passwords. Users receive a magic link via email.
-- **Chapters** are the top-level tenant. Each chapter has its own Firestore subcollections, slug-based URL, and member list.
-- **Rush chairs** create a chapter via `/start`, which sends a setup email link. On completion, the chapter and first rush-chair membership are created in a transaction.
-- **Members** are invited by rush chairs from the Settings page. Invites generate a join URL (`/:chapterSlug/join?invite=<id>`) that triggers an email-link sign-in and membership creation.
-- **Roles:** `rush_chair` (full access: QR, bids, settings, invites) and `member` (dashboard, profiles, ratings, comments).
-- **Rushees** have no login. They hit a public check-in URL (`/:chapterSlug/checkin/:nightId`) and fill a form.
-- **Session bootstrap:** On sign-in, a `collectionGroup('members')` query finds all active memberships for the user's UID. The app redirects to the first chapter's dashboard.
-
-Every Firestore write from a member must include the member's UID and `serverTimestamp()`. No exceptions.
+**Live in production.** Real chapters use this during rush season. Netlify auto-deploys every push to `main`, so pushing is shipping: `npm run build` and `npm run lint` must pass before any task is done, and auth/check-in changes need real-device testing before merge.
 
 ## Commands
 
 ```
-npm install        # install deps
-npm run dev        # local dev server (Vite default: localhost:5173)
-npm run build      # production build
+npm run dev        # Vite dev server (localhost:5173)
+npm run build      # production build — must pass before a task is "done"
+npm run lint       # eslint — must pass
 npm run preview    # preview production build locally
 ```
 
-Deploy happens via Netlify auto-deploy on push to `main`.
+## Stack
+
+- React 19 + Vite, JavaScript (no TypeScript), plain CSS — one `.css` file per page/component. No Tailwind.
+- Firebase: Firestore (data), Storage (photos), Auth (email-link sign-in, no passwords). Client-only app — no backend server or Cloud Functions yet.
+- `qrcode` for client-side QR generation; `browser-image-compression` to keep photos <200KB before upload.
 
 ## Architecture (keep it this simple)
 
 ```
 src/
-  pages/        # one file per route (Home, SignIn, CreateChapter, Dashboard, CheckIn, etc.)
-  components/   # shared UI (RusheeCard, etc.)
-  lib/          # firebase.js (init + all Firestore helpers)
-  hooks/        # useAuth, useChapter, useRushees
-  App.jsx       # router with ProtectedChapterRoute / PublicChapterRoute wrappers
+  pages/           # one file per route; default exports
+  components/      # shared UI (RusheeCard, ErrorBoundary)
+  hooks/           # useAuth, useChapter, useRushees
+  lib/firebase.js  # Firebase init + ALL Firestore helpers — data access lives here only
+  App.jsx          # router: ProtectedChapterRoute (auth + membership) / PublicChapterRoute (chapter lookup only)
 ```
 
-- **One file per page.** Don't pre-optimize with layouts or shared wrappers until it hurts.
-- **Firestore listeners** (`onSnapshot`) for anything that needs to be live. No polling.
-- **Client-side image compression** before upload (target <200KB per photo).
-- **Chapter-scoped routes:** Protected routes use `ProtectedChapterRoute` (auth + membership check). Public routes (check-in, join) use `PublicChapterRoute` (chapter lookup only).
+- Live data uses `onSnapshot`, never polling. Always return the unsubscribe function from `useEffect`.
+- One file per page. No shared layouts or wrappers until it hurts. Copy-paste twice before extracting.
+- Functional components + hooks only. Named exports, except default exports for pages. Split files past ~150 lines. Comments explain *why*, not *what*.
 
-## Code style
+Shipped surface: email-link auth, chapter onboarding + settings, public check-in (photo + dedupe), live roster, rushee profile (rate/comment/talked-to/bid status), QR page, bid kanban (Bid/Table/Fade columns), bid tracker.
 
-- Functional React components + hooks. No class components.
-- Named exports preferred. Default export only for pages/routes.
-- Small files. If a component crosses ~150 lines, split it.
-- No premature abstraction. Copy-paste twice before extracting.
-- Comments explain *why*, not *what*.
+## Multi-tenant model
 
-## What's shipped
+- **Chapter = tenant.** Slug-based URLs (`/:chapterSlug/...`), chapter-scoped Firestore subcollections. Slugs are immutable — renaming a chapter updates `displayName` only, never the URL (intentional, avoids breaking printed QR links).
+- **Roles:** `rush_chair` (QR, bids, settings, invites) and `member` (dashboard, profiles, ratings, comments). Rushees have no login — they use the public check-in URL `/:chapterSlug/checkin/:nightId`.
+- **Chapter creation:** `/start` sends a setup email link; chapter + first rush-chair membership are created in one transaction. **Invites:** rush chairs generate `/:chapterSlug/join?invite=<id>` links from Settings.
+- **Session bootstrap:** `collectionGroup('members')` query by UID finds memberships. Membership docs deliberately duplicate `chapterId`/`chapterSlug`/`chapterDisplayName` so this works without a join.
+- **Every Firestore write from a member includes the member's UID and `serverTimestamp()`. No exceptions.**
+- Rushee names are stored lowercased (`firstName`/`lastName`) for duplicate detection, with a separate `displayName` for display. Always normalize before querying.
 
-1. Email-link auth (sign-in, chapter creation, invite acceptance)
-2. Chapter onboarding + settings (identity, rushee tags, member invites)
-3. Rushee check-in form (photo upload, compression, duplicate detection)
-4. Dashboard roster (live-updating cards, sortable by avg rating, search by name)
-5. Rushee profile with rate/comment/talked-to + bid status (rush chair only)
-6. QR code page (generate, view, copy links, download PNG)
-7. Bid list kanban (bid/table/fade columns, drag-drop, live)
-8. Bid tracker (call status, response tracking for bid-column rushees)
+## Security invariants
 
-## Deferred (post-MVP)
-
-- Pledge class roster
-- CSV export
-- Full filter set (by night, by tag, unrated-by-me, not-talked-to)
-- PWA manifest + service worker
-- Dark navy + gold styling, glassy cards, bottom nav bar
-- Code-splitting / lazy routes (bundle is currently ~746KB)
-
-If a task pulls in one of the deferred items, stop and ask before building it.
+- In `firestore.rules`, `isSignedIn()` alone is never sufficient for a write — always scope to the specific user (`request.auth.uid` / email match) or tenant. This app is multi-tenant; a member of one chapter must never touch another chapter's data.
+- Known compromise: unauthenticated rushee check-in writes (with field validation) and open Storage uploads for rushee photos. Transitional until uploads move behind a trusted backend — don't loosen further.
 
 ## Gotchas
 
-- **Public check-in writes:** Firestore rules allow unauthenticated creates/updates to the `rushees` collection with field validation. Storage rules are currently open for rushee photo uploads — tighten once uploads move behind a trusted backend.
-- **Photo uploads:** compress on client first. Safari on iOS has quirks with `input[type=file][capture=user]` — test on a real iPhone before declaring it done.
-- **`onSnapshot` listeners leak** if not unsubscribed. Always return the unsubscribe function from `useEffect`.
-- **`recalcAvgRating`** runs client-side in a transaction after each rating write. Long-term this should be a Cloud Function trigger.
-- **Slug immutability:** Renaming a chapter in Settings updates `displayName` but not the URL slug. This is intentional for now to avoid breaking links.
+- Safari on iOS is quirky with `input[type=file][capture=user]` — test photo capture on a real iPhone before declaring it done.
+- `recalcAvgRating` runs client-side in a Firestore transaction after each rating write. Long-term this belongs in a Cloud Function trigger.
+- `FinishSignIn`-style lesson: never put user-typed input state in a `useEffect` dependency array that fires async side effects.
+- More in `learning.md` — check it when a task touches auth, rules, or check-in.
 
-## Project-specific docs (read on demand)
+## Guardrails
 
-- `progress.md` — current state, next steps, session log
-- `learning.md` — gotchas, decisions, lessons
-- `spec.md` — full product spec (reference only, don't re-read every session)
+- **Deferred features** (stop and ask before building any of these): pledge class roster, CSV export, full filter set, PWA manifest/service worker, dark navy + gold restyle, code-splitting (bundle ~746KB).
+- **New dependency?** Pause and say which one and why before installing.
+- **Any UI work** — pages, components, layout, styling — invoke the `/frontend-design` skill first. No UI work without it.
+- **Firestore/Storage rules changes** get a security re-read against the invariants above before commit.
 
-## Frontend design skill
+## Project docs
 
-When updating, changing, or creating any UI — pages, components, layouts, styling — always use the `/frontend-design` skill (`.claude/commands/frontend-design.md`). This ensures consistent, high-quality, non-generic design across the app. No UI work without it.
+- `progress.md` — current status, next steps, session log. Read at session start; update at session end (what got done, decisions, what's next).
+- `learning.md` — append-only gotcha/decision log. Read when a task touches an area it covers; append when you hit a gotcha or make a non-obvious call.
 
 ## Working style with me
 
 - Keep responses terse. Don't restate the prompt. Don't summarize what you just did unless I ask.
 - Before any multi-file change, tell me the plan in bullet points.
-- If you're about to install a new dependency, pause and tell me which one and why.
 - If you're stuck or uncertain, ask — don't guess.

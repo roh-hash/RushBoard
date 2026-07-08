@@ -64,3 +64,9 @@ This file exists so we stop re-solving the same problems. If something is unclea
 **Problem:** Any signed-in user from any chapter could accept (update) any invite in any other chapter.
 **Resolution:** Changed to `isRushChair(chapterId) || (isSignedIn() && resource.data.email == request.auth.token.email)` — only the invite's intended recipient or the chapter's rush chair can update it.
 **Takeaway:** In multi-tenant Firestore rules, `isSignedIn()` alone is never enough for cross-tenant writes. Always scope to the specific user or tenant.
+
+## 2026-07-08 — Join codes live on a publicly readable chapter doc
+**Context:** Replaced per-email invites with shareable join-code links (`/:slug/join?code=...`); codes stored as `memberJoinCode`/`rushChairJoinCode` on the chapter doc.
+**Problem / question:** `chapters/{id}` has `allow read: if true` (needed for public check-in chapter lookup), so the join codes — including the rush-chair one — are readable by anyone who queries the chapter doc. The member-create rule also never validates the code; the check is client-side only.
+**Resolution:** Shipped as-is to unblock the UX win, but logged both gaps at the top of the progress.md backlog. Fix is to move codes to a rush-chair-only subcollection and/or validate joins behind a trusted backend or rules-level check.
+**Takeaway:** Anything stored on a `read: if true` doc is public API. Secrets (codes, tokens) must live in a scoped subcollection or server-side.
