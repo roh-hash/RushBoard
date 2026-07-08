@@ -14,8 +14,8 @@ Prioritize from real usage. Deferred-feature guardrail lives in CLAUDE.md — as
 
 - [ ] **App Check:** `VITE_RECAPTCHA_SITE_KEY` is not set — App Check is inactive. Add key to `.env` + Netlify env vars, then enable enforcement in Firebase console for Firestore and Storage.
 - [ ] Member management UI in Settings (remove member, change role) — in progress
-- [ ] Duplicate rushee merging UI in roster (gap from removing client-side dedupe in public check-in)
-- [ ] Rules test suite — needs `@firebase/rules-unit-testing` + emulator (ask before installing)
+- [ ] Rules test suite — needs `@firebase/rules-unit-testing` + emulator; **blocked on Java** (emulator requires JRE, not installed)
+- [ ] Duplicate rushee full merge UI (consolidate two docs + subcollections) — delete button on Profile unblocks the immediate gap
 - [ ] Move `recalcAvgRating` to a Cloud Function trigger
 - [ ] Deferred (ask before starting): pledge class roster, CSV export, full filters, PWA, restyle, code-splitting
 

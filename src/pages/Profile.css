@@ -402,3 +402,54 @@
 .profile-rating-stars-empty {
   color: var(--border-medium);
 }
+
+/* ── Danger zone ── */
+.profile-danger-zone {
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.profile-danger-title {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-sm);
+}
+
+.profile-danger-desc {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+  line-height: 1.55;
+  margin: 0 0 var(--space-md);
+  max-width: 38ch;
+}
+
+.profile-delete-btn {
+  background: none;
+  border: 1px solid rgba(192, 93, 62, 0.28);
+  border-radius: var(--radius-full);
+  padding: 8px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--accent-soft);
+  transition: all 0.2s var(--ease-out);
+}
+
+.profile-delete-btn:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.profile-delete-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

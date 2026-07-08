@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { addComment, commentsRef, db, doc, getTalkedTo, onSnapshot, orderBy, query, ratingsRef, setBidStatus, setRating, setTalkedTo } from '../lib/firebase';
+import { addComment, commentsRef, db, deleteRushee, doc, getTalkedTo, onSnapshot, orderBy, query, ratingsRef, setBidStatus, setRating, setTalkedTo } from '../lib/firebase';
 import { useChapterContext } from '../hooks/useChapter';
 import './Profile.css';
 
@@ -15,6 +15,7 @@ export default function Profile() {
   const [talkedTo, setTalkedToState] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!chapter?.id) return undefined;
@@ -62,6 +63,17 @@ export default function Profile() {
     await addComment(chapter.id, id, membership, commentText.trim());
     setCommentText('');
     setSubmitting(false);
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`Permanently delete ${rushee.displayName}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await deleteRushee(chapter.id, id);
+      navigate(`/${chapter.slug}/dashboard`);
+    } catch {
+      setDeleting(false);
+    }
   }
 
   async function handleTalkedTo() {
@@ -200,6 +212,21 @@ export default function Profile() {
           ))
         )}
       </div>
+      {isRushChair && (
+        <div className="profile-danger-zone">
+          <h3 className="profile-danger-title">Remove rushee</h3>
+          <p className="profile-danger-desc">
+            Permanently deletes this profile, ratings, and comments. Use this to clean up duplicate check-in entries.
+          </p>
+          <button
+            className="profile-delete-btn"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting…' : `Delete ${rushee.displayName}`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

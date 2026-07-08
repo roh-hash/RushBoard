@@ -467,6 +467,13 @@ export async function clearBidStatus(chapterId, rusheeId, member) {
   });
 }
 
+export async function deleteRushee(chapterId, rusheeId) {
+  // Deletes the rushee doc only. Subcollections (ratings, comments, talkedTo)
+  // become orphaned — client SDK can't cascade-delete them. Acceptable until
+  // a Cloud Function cleanup trigger exists.
+  await deleteDoc(doc(chapterRusheesCol(chapterId), rusheeId));
+}
+
 export async function removeMember(chapterId, uid) {
   await deleteDoc(doc(chapterMembersCol(chapterId), uid));
 }
