@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { regenerateJoinCode, chapterMembersCol, onSnapshot, orderBy, query, updateChapterProfile, updateChapterSettings } from '../lib/firebase';
+import { regenerateJoinCode, chapterJoinCodesDoc, chapterMembersCol, onSnapshot, orderBy, query, updateChapterProfile, updateChapterSettings } from '../lib/firebase';
 import { useChapterContext } from '../hooks/useChapter';
 import './Settings.css';
 
@@ -172,21 +172,28 @@ function IdentitySettingsCard({ chapter, settings }) {
 }
 
 function JoinLinksCard({ chapter }) {
+  const [codes, setCodes] = useState(null);
   const [memberMsg, setMemberMsg] = useState('');
   const [rushChairMsg, setRushChairMsg] = useState('');
   const [regenerating, setRegenerating] = useState('');
 
-  function buildLink(code) {
-    return `${window.location.origin}/${chapter.slug}/join?code=${code}`;
+  useEffect(() => {
+    return onSnapshot(chapterJoinCodesDoc(chapter.id), (snap) => {
+      if (snap.exists()) setCodes(snap.data());
+    });
+  }, [chapter.id]);
+
+  function buildLink(code, role) {
+    return `${window.location.origin}/${chapter.slug}/join?code=${code}&role=${role}`;
   }
 
   async function handleCopy(role) {
-    let code = role === 'rush_chair' ? chapter.rushChairJoinCode : chapter.memberJoinCode;
-    // Generate code if this is an older chapter that doesn't have one yet.
+    const codeField = role === 'rush_chair' ? 'rushChairCode' : 'memberCode';
+    let code = codes?.[codeField];
     if (!code) {
       code = await regenerateJoinCode(chapter.id, role);
     }
-    await navigator.clipboard.writeText(buildLink(code)).catch(() => {});
+    await navigator.clipboard.writeText(buildLink(code, role)).catch(() => {});
     const set = role === 'rush_chair' ? setRushChairMsg : setMemberMsg;
     set('Link copied!');
     setTimeout(() => set(''), 2500);
@@ -197,7 +204,7 @@ function JoinLinksCard({ chapter }) {
     setRegenerating(role);
     try {
       const newCode = await regenerateJoinCode(chapter.id, role);
-      await navigator.clipboard.writeText(buildLink(newCode)).catch(() => {});
+      await navigator.clipboard.writeText(buildLink(newCode, role)).catch(() => {});
       const set = role === 'rush_chair' ? setRushChairMsg : setMemberMsg;
       set('Regenerated and copied!');
       setTimeout(() => set(''), 3000);

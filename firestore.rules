@@ -60,6 +60,20 @@ service cloud.firestore {
       ]);
     }
 
+    function joinCodesPath(chapterId) {
+      return /databases/$(database)/documents/chapters/$(chapterId)/private/joinCodes;
+    }
+
+    function validMemberJoin(chapterId) {
+      return request.resource.data.role == 'member' &&
+        request.resource.data.joinCode == get(joinCodesPath(chapterId)).data.memberCode;
+    }
+
+    function validRushChairJoin(chapterId) {
+      return request.resource.data.role == 'rush_chair' &&
+        request.resource.data.joinCode == get(joinCodesPath(chapterId)).data.rushChairCode;
+    }
+
     match /chapterSlugs/{slug} {
       allow read: if true;
       allow create: if isSignedIn();
@@ -79,6 +93,12 @@ service cloud.firestore {
       allow update: if isRushChair(chapterId);
       allow delete: if false;
 
+      // Join codes are rush-chair-only; the client never needs to read them directly —
+      // validation happens server-side via rules get() on member create.
+      match /private/joinCodes {
+        allow read, write: if isRushChair(chapterId);
+      }
+
       match /settings/{docId} {
         allow read: if true;
         allow create: if isCreatingOwnChapter(chapterId);
@@ -87,16 +107,17 @@ service cloud.firestore {
 
       match /members/{uid} {
         allow read: if (isSignedIn() && request.auth.uid == uid) || isChapterMember(chapterId);
-        allow create: if isSignedIn() && request.auth.uid == uid;
-        allow update: if isRushChair(chapterId) || (isSignedIn() && request.auth.uid == uid);
+        allow create: if isSignedIn() && request.auth.uid == uid && (
+          isCreatingOwnChapter(chapterId) ||
+          validMemberJoin(chapterId) ||
+          validRushChairJoin(chapterId)
+        );
+        // Members can update their own doc but cannot self-promote role or change status.
+        allow update: if isRushChair(chapterId) || (
+          isSignedIn() && request.auth.uid == uid &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status', 'joinCode'])
+        );
         allow delete: if isRushChair(chapterId);
-      }
-
-      match /invites/{inviteId} {
-        allow read: if true;
-        allow create, delete: if isRushChair(chapterId);
-        allow update: if isRushChair(chapterId) ||
-          (isSignedIn() && resource.data.email == request.auth.token.email);
       }
 
       match /rushNights/{nightId} {

@@ -6,7 +6,6 @@ import {
 } from 'firebase/auth';
 import {
   addDoc,
-  arrayUnion,
   collection,
   collectionGroup,
   deleteDoc,
@@ -119,6 +118,10 @@ export function chapterRushNightsCol(chapterId) {
   return collection(db, 'chapters', chapterId, 'rushNights');
 }
 
+export function chapterJoinCodesDoc(chapterId) {
+  return doc(db, 'chapters', chapterId, 'private', 'joinCodes');
+}
+
 export function ratingsRef(chapterId, rusheeId) {
   return collection(db, 'chapters', chapterId, 'rushees', rusheeId, 'ratings');
 }
@@ -181,16 +184,21 @@ export async function createChapterWithOwner({
     const createdChapterRef = doc(chaptersRef());
     const settingsRef = chapterSettingsDoc(createdChapterRef.id);
     const memberRef = doc(chapterMembersCol(createdChapterRef.id), ownerUid);
+    const joinCodesRef = chapterJoinCodesDoc(createdChapterRef.id);
 
     transaction.set(createdChapterRef, {
       fraternityName: cleanFraternity,
       charterName: cleanCharter,
       displayName,
       slug,
-      memberJoinCode: generateJoinCode(),
-      rushChairJoinCode: generateJoinCode(),
       createdAt: serverTimestamp(),
       createdByUid: ownerUid,
+    });
+
+    transaction.set(joinCodesRef, {
+      memberCode: generateJoinCode(),
+      rushChairCode: generateJoinCode(),
+      createdAt: serverTimestamp(),
     });
 
     transaction.set(slugRef, {
@@ -252,45 +260,34 @@ export async function updateChapterSettings(chapterId, { rusheeTags }) {
 
 export async function regenerateJoinCode(chapterId, role) {
   const code = generateJoinCode();
-  const field = role === 'rush_chair' ? 'rushChairJoinCode' : 'memberJoinCode';
-  await updateDoc(chapterDoc(chapterId), { [field]: code });
+  const field = role === 'rush_chair' ? 'rushChairCode' : 'memberCode';
+  await updateDoc(chapterJoinCodesDoc(chapterId), { [field]: code });
   return code;
 }
 
-export async function acceptCodeJoin({ chapterId, code, uid, email, fullName }) {
-  const chapterSnap = await getDoc(chapterDoc(chapterId));
-  if (!chapterSnap.exists()) throw new Error('Chapter not found.');
-
-  const chapter = chapterSnap.data();
-
-  let role;
-  if (code === chapter.rushChairJoinCode) {
-    role = 'rush_chair';
-  } else if (code === chapter.memberJoinCode) {
-    role = 'member';
-  } else {
-    throw new Error('Invalid or expired join link.');
-  }
-
+export async function acceptCodeJoin({ chapterId, code, role, uid, email, fullName, chapterSlug, chapterDisplayName }) {
   const memberRef = doc(chapterMembersCol(chapterId), uid);
   const existing = await getDoc(memberRef);
   if (existing.exists() && existing.data().status === 'active') {
-    return { chapterSlug: chapter.slug };
+    return { chapterSlug };
   }
 
+  // joinCode is validated server-side in Firestore rules via get() on private/joinCodes.
+  // It's stored here as an audit trail of which link was used to join.
   await setDoc(memberRef, {
     uid,
     email: normalizeEmail(email),
     fullName: fullName.trim(),
     role,
+    joinCode: code,
     status: 'active',
     chapterId,
-    chapterSlug: chapter.slug,
-    chapterDisplayName: chapter.displayName,
+    chapterSlug,
+    chapterDisplayName,
     joinedAt: serverTimestamp(),
   }, { merge: true });
 
-  return { chapterSlug: chapter.slug };
+  return { chapterSlug };
 }
 
 export async function findDuplicateRushee(chapterId, firstName, lastName, phone) {
@@ -329,23 +326,18 @@ export async function submitRusheeCheckIn({
   tags,
   photo,
 }) {
-  const duplicate = await findDuplicateRushee(chapterId, firstName, lastName, phone);
+  // Pre-generate the doc ref so we can upload the photo first and include the URL
+  // in the initial create — avoids a separate public update that the rules don't allow.
+  // Duplicate detection is omitted: unauthenticated reads on the rushees collection are
+  // denied by rules, so duplicate merging must happen manually from the roster.
+  const rusheeRef = doc(chapterRusheesCol(chapterId));
 
-  if (duplicate) {
-    await updateDoc(duplicate.ref, {
-      attendedNights: arrayUnion(nightId),
-      updatedAt: serverTimestamp(),
-    });
-
-    return {
-      rusheeId: duplicate.id,
-      displayName: duplicate.data().displayName,
-      photoURL: duplicate.data().photoURL || '',
-      created: false,
-    };
+  let photoURL = '';
+  if (photo) {
+    photoURL = await uploadRusheePhoto(chapterId, rusheeRef.id, photo);
   }
 
-  const rusheeRef = await addDoc(chapterRusheesCol(chapterId), {
+  await setDoc(rusheeRef, {
     firstName: firstName.trim().toLowerCase(),
     lastName: lastName.trim().toLowerCase(),
     displayName: `${firstName.trim()} ${lastName.trim()}`,
@@ -353,21 +345,12 @@ export async function submitRusheeCheckIn({
     hometown: hometown.trim(),
     year: year || '',
     tags: sanitizeTags(tags),
-    photoURL: '',
+    photoURL,
     attendedNights: [nightId],
     avgRating: null,
     ratingCount: 0,
     createdAt: serverTimestamp(),
   });
-
-  let photoURL = '';
-
-  if (photo) {
-    photoURL = await uploadRusheePhoto(chapterId, rusheeRef.id, photo);
-    await updateDoc(rusheeRef, {
-      photoURL,
-    });
-  }
 
   return {
     rusheeId: rusheeRef.id,

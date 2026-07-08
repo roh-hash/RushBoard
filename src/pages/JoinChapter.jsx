@@ -23,25 +23,23 @@ export default function JoinChapter() {
     }
   }, [chapter?.id, chapter?.slug, memberships, navigate]);
 
-  const role = chapter
-    ? code === chapter.rushChairJoinCode
-      ? 'rush_chair'
-      : code === chapter.memberJoinCode
-        ? 'member'
-        : null
-    : null;
+  const roleParam = searchParams.get('role');
+  const role = roleParam === 'rush_chair' || roleParam === 'member' ? roleParam : null;
 
   async function handleDirectJoin() {
-    if (!chapter?.id || !code || !user) return;
+    if (!chapter?.id || !code || !role || !user) return;
     setSubmitting(true);
     setError('');
     try {
       const result = await acceptCodeJoin({
         chapterId: chapter.id,
         code,
+        role,
         uid: user.uid,
         email: user.email,
         fullName: user.displayName || '',
+        chapterSlug: chapter.slug,
+        chapterDisplayName: chapter.displayName,
       });
       navigate(`/${result.chapterSlug}/dashboard`, { replace: true });
     } catch (err) {
@@ -60,6 +58,7 @@ export default function JoinChapter() {
         type: 'joinWithCode',
         chapterSlug: chapter.slug,
         code,
+        role,
         fullName: fullName.trim(),
       });
       setSentTo(email.trim().toLowerCase());

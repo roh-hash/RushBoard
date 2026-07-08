@@ -70,3 +70,20 @@ This file exists so we stop re-solving the same problems. If something is unclea
 **Problem / question:** `chapters/{id}` has `allow read: if true` (needed for public check-in chapter lookup), so the join codes — including the rush-chair one — are readable by anyone who queries the chapter doc. The member-create rule also never validates the code; the check is client-side only.
 **Resolution:** Shipped as-is to unblock the UX win, but logged both gaps at the top of the progress.md backlog. Fix is to move codes to a rush-chair-only subcollection and/or validate joins behind a trusted backend or rules-level check.
 **Takeaway:** Anything stored on a `read: if true` doc is public API. Secrets (codes, tokens) must live in a scoped subcollection or server-side.
+
+## 2026-07-08 — Public check-in was broken: unauthenticated reads on rushees fail
+**Context:** `submitRusheeCheckIn` called `findDuplicateRushee` first, which does a `getDocs` on the rushees collection. Firestore rules say `allow read: if isChapterMember(chapterId)`. Unauthenticated public check-in visitors fail that check immediately.
+**Problem / question:** Check-in was broken from the first rules deploy (April 17). A separate `updateDoc` to attach `photoURL` also failed — `isPublicRusheeUpdate` only allows `attendedNights`/`updatedAt`.
+**Resolution:** Removed `findDuplicateRushee` from the public check-in path (unauthenticated reads can't work without exposing PII to the public or using a Cloud Function). Pre-generate the doc ref, upload the photo first, then `setDoc` with `photoURL` already included — no separate update needed. Duplicate merging is now a manual task in the roster.
+**Takeaway:** Unauthenticated Firestore reads require a `allow read: if true` rule on that collection, which exposes all docs. Never add it to rushees (PII). Duplicate detection for public flows needs a trusted backend or must be skipped.
+
+## 2026-07-08 — Join code security: rules-level validation via subcollection get()
+**Context:** Moving join codes off the public chapter doc into `chapters/{id}/private/joinCodes`.
+**Problem / question:** Joiners can't read the private doc to compare the code — so how does the UI know which role a link grants? How does the server validate without a Cloud Function?
+**Resolution:** Firestore rules can call `get()` on any path regardless of the client's read permission. Member create rule validates `request.resource.data.joinCode == get(joinCodesPath).data.rushChairCode` (or memberCode). The role hint is encoded in the join URL as `&role=rush_chair` — it's non-secret metadata; the rules validate the code independently so a manipulated role param just gets a rules denial.
+**Takeaway:** Rules `get()` is a powerful escape hatch for server-side validation without Cloud Functions. It doesn't bypass the client's inability to read the doc — it's a server-to-server read inside the rules engine.
+
+## 2026-07-08 — Deployment order matters when rules and code are tightly coupled
+**Context:** New rules require `joinCode` field on member-create writes; new client code sends it. Old client code doesn't. Old join links lack `&role=`.
+**Resolution:** Deploy rules first, then push code. This sequence: (1) revokes old join links at the rules level immediately, (2) gives rush chairs access to `private/joinCodes` so the new Settings UI can work as soon as code deploys. Deploying code first would leave a window where Settings.jsx fails (denied reads on private/joinCodes under old rules).
+**Takeaway:** When rules tighten a write path that client code also changes, deploy rules first. New rules + old client = denial (safe). Old rules + new client = gap (unsafe).

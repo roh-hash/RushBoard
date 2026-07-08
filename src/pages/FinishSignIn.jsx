@@ -81,9 +81,12 @@ export default function FinishSignIn() {
         const result = await acceptCodeJoin({
           chapterId: chapter.id,
           code: pendingFlow.code,
+          role: pendingFlow.role,
           uid: signedInUser.uid,
           email: signedInUser.email || emailToUse,
           fullName: pendingFlow.fullName || signedInUser.displayName || '',
+          chapterSlug: chapter.slug,
+          chapterDisplayName: chapter.displayName,
         });
         clearPendingFlow();
         navigate(`/${result.chapterSlug}/dashboard`, { replace: true });
