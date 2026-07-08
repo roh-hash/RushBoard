@@ -8,6 +8,29 @@ Running log of project state. Read at session start, update at session end.
 **Last session:** Security hardening shipped (join codes in private subcollection, rules-validated joins, storage limits), bid columns renamed to Waitlist/Reject, landing page redesigned, member management + rushee delete added.
 **Next up:** Register the localhost App Check debug token (run `npm run dev`, copy token from browser console, add in Firebase console → App Check → Apps → Manage debug tokens), then triage rush-season feedback.
 
+## Live QA run — 2026-07-08 (production, post-App-Check-enforcement)
+
+Tested in real Chrome against prod. **Found + fixed + deployed:** chapter creation was
+broken — createChapterWithOwner writes private/joinCodes in the creation transaction but
+the rule required isRushChair (member doc doesn't exist yet); fixed with
+isCreatingOwnChapter on create, rules deployed (commit 125621a).
+
+**PASSED:** /start onboarding email (spam note shows) → chapter created via magic link →
+dashboard → rush night + QR + check-in URL → public check-in form incl. photo upload
+(Storage rules OK, compression OK, "You're checked in!") → live roster card w/ photo,
+tag, night count → profile: 4★ rating (avg recalc OK), comment w/ name+timestamp,
+talked-to, bid status Bid → Bid List: renamed Bid/Waitlist/Reject columns, ··· move
+Bid→Waitlist live. Delete-rushee section present on Profile.
+
+**NOT tested (do next QA pass):** Bid Tracker interactions (called/response toggles),
+Settings (join links copy/regenerate, member management, rename, tags), join flow w/
+second account, fully-anonymous check-in WRITE (signed-out browser), real-iPhone photo
+capture. **Auth emails land in Gmail spam** — SPF/DKIM custom domain remains the fix.
+
+**Cleanup owed:** test chapter `qa-test-fraternity-claude-test` (+ its rushee "Testy
+McRushface", night "QA Night 1", chapterSlugs doc) — delete via Firebase console;
+app can't delete chapters/slugs by design. Browser left signed in as rorotx8@gmail.com.
+
 ## Backlog
 
 Prioritize from real usage. Deferred-feature guardrail lives in CLAUDE.md — ask before starting one.
