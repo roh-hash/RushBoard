@@ -62,7 +62,7 @@ export default function QRCodes() {
               type="text"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
-              placeholder='Night label (e.g. "BBQ Night")'
+              placeholder='Night label (e.g. "Pre-Rush Day 1")'
               className="qr-create-input"
             />
           </div>
@@ -87,7 +87,6 @@ export default function QRCodes() {
 function NightCard({ night, baseUrl, chapterSlug }) {
   const canvasRef = useRef(null);
   const checkinUrl = `${baseUrl}/${chapterSlug}/checkin/${night.id}`;
-  const dashboardUrl = `${baseUrl}/${chapterSlug}/dashboard`;
   const [copied, setCopied] = useState('');
 
   useEffect(() => {
@@ -125,7 +124,6 @@ function NightCard({ night, baseUrl, chapterSlug }) {
 
           <div className="qr-night-links">
             <LinkRow label="Check-in" url={checkinUrl} copied={copied === 'checkin'} onCopy={() => copyLink(checkinUrl, 'checkin')} />
-            <LinkRow label="Dashboard" url={dashboardUrl} copied={copied === 'dashboard'} onCopy={() => copyLink(dashboardUrl, 'dashboard')} />
           </div>
 
           <button onClick={downloadQR} className="qr-download">Download QR</button>
