@@ -7,7 +7,7 @@ Running log of project state. Read at session start, update at session end.
 **Phase:** Live in production, no real chapters onboarded yet. MVP shipped (see "Shipped surface" in CLAUDE.md).
 **2026-07-08:** All Firestore data wiped (`firebase firestore:delete --all-collections`) — test chapters removed for a clean slate. Storage test photos still need manual deletion (console → Storage → `chapters/` folder). Auth users left intact.
 **Last session:** Security hardening shipped (join codes in private subcollection, rules-validated joins, storage limits), bid columns renamed to Waitlist/Reject, landing page redesigned, member management + rushee delete added.
-**Next up:** Enable the Google sign-in provider (Firebase console → Authentication → Sign-in method → Google) — the new Google buttons error with `auth/operation-not-allowed` until then. Also register the localhost App Check debug token (run `npm run dev`, copy token from browser console, add in Firebase console → App Check → Apps → Manage debug tokens), then triage rush-season feedback.
+**Next up:** Google sign-in enabled + verified live 2026-07-08 (popup → account → dashboard, same-email linking confirmed). Remaining: register the localhost App Check debug token (run `npm run dev`, copy token from browser console, add in Firebase console → App Check → Apps → Manage debug tokens), then triage rush-season feedback.
 
 ## Live QA run — 2026-07-08 (production, post-App-Check-enforcement)
 
