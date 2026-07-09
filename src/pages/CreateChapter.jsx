@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createChapterWithOwner } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
+import { GoogleButton } from '../components/GoogleButton';
 import './Auth.css';
 
 export default function CreateChapter() {
   const navigate = useNavigate();
-  const { sendMagicLink } = useAuth();
+  const { sendMagicLink, signInWithGoogle } = useAuth();
   const [form, setForm] = useState({
     fraternityName: '',
     charterName: '',
@@ -54,9 +56,39 @@ export default function CreateChapter() {
     }
   }
 
+  async function handleGoogleCreate() {
+    setError('');
+    if (!form.fraternityName.trim() || !form.charterName.trim() || !form.fullName.trim()) {
+      setError('Fill in the fraternity name, chapter name, and your name first.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const googleUser = await signInWithGoogle();
+      const created = await createChapterWithOwner({
+        fraternityName: form.fraternityName.trim(),
+        charterName: form.charterName.trim(),
+        ownerUid: googleUser.uid,
+        ownerEmail: googleUser.email,
+        ownerName: form.fullName.trim(),
+        rusheeTags: tags,
+      });
+      navigate(`/${created.slug}/dashboard`, { replace: true });
+    } catch (err) {
+      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        setError(err?.message || 'Could not create the chapter.');
+      }
+      setSubmitting(false);
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
+    if (!form.email.trim()) {
+      setError('Enter your email to get a setup link, or use Create with Google.');
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -132,14 +164,13 @@ export default function CreateChapter() {
                 />
               </label>
               <label className="auth-field">
-                <span>Your email</span>
+                <span>Your email (only needed for the email link)</span>
                 <input
                   type="email"
                   value={form.email}
                   onChange={updateField('email')}
                   placeholder="jordan@school.edu"
                   className="auth-input"
-                  required
                 />
               </label>
             </div>
@@ -197,8 +228,10 @@ export default function CreateChapter() {
             </div>
 
             {error && <p className="auth-error">{error}</p>}
+            <GoogleButton onClick={handleGoogleCreate} disabled={submitting} label="Create with Google" />
+            <div className="auth-divider">or get a setup link by email</div>
             <button type="submit" disabled={submitting} className="auth-submit">
-              {submitting ? 'Sending setup link...' : 'Create chapter'}
+              {submitting ? 'Working...' : 'Email me a setup link'}
             </button>
           </form>
         )}

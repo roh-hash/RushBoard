@@ -1,9 +1,11 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useState } from 'react';
 import {
+  GoogleAuthProvider,
   isSignInWithEmailLink,
   onAuthStateChanged,
   sendSignInLinkToEmail,
   signInWithEmailLink,
+  signInWithPopup,
   signOut,
 } from 'firebase/auth';
 import { collectionGroup, db, auth, onSnapshot, query, where } from '../lib/firebase';
@@ -113,6 +115,12 @@ export function AuthProvider({ children }) {
       const normalizedEmail = email.trim().toLowerCase();
       setPendingFlow(normalizedEmail, flow);
       await sendSignInLinkToEmail(auth, normalizedEmail, buildActionCodeSettings(flow));
+    },
+    // Popup, not redirect: signInWithRedirect breaks under browser storage
+    // partitioning unless auth runs on a custom domain.
+    async signInWithGoogle() {
+      const credential = await signInWithPopup(auth, new GoogleAuthProvider());
+      return credential.user;
     },
     isMagicLink(url) {
       return isSignInWithEmailLink(auth, url);

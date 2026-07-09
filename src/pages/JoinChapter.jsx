@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { acceptCodeJoin } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useChapterContext } from '../hooks/useChapter';
+import { GoogleButton } from '../components/GoogleButton';
 import './Auth.css';
 
 export default function JoinChapter() {
@@ -10,7 +11,7 @@ export default function JoinChapter() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get('code');
   const { chapter, loading: chapterLoading } = useChapterContext();
-  const { user, loading: authLoading, sendMagicLink, memberships } = useAuth();
+  const { user, loading: authLoading, sendMagicLink, signInWithGoogle, memberships } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +45,31 @@ export default function JoinChapter() {
       navigate(`/${result.chapterSlug}/dashboard`, { replace: true });
     } catch (err) {
       setError(err?.message || 'Could not join chapter.');
+      setSubmitting(false);
+    }
+  }
+
+  async function handleGoogleJoin() {
+    if (!chapter?.id || !code || !role) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const googleUser = await signInWithGoogle();
+      const result = await acceptCodeJoin({
+        chapterId: chapter.id,
+        code,
+        role,
+        uid: googleUser.uid,
+        email: googleUser.email,
+        fullName: fullName.trim() || googleUser.displayName || '',
+        chapterSlug: chapter.slug,
+        chapterDisplayName: chapter.displayName,
+      });
+      navigate(`/${result.chapterSlug}/dashboard`, { replace: true });
+    } catch (err) {
+      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        setError(err?.message || 'Could not join chapter.');
+      }
       setSubmitting(false);
     }
   }
@@ -109,6 +135,8 @@ export default function JoinChapter() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="auth-form">
+            <GoogleButton onClick={handleGoogleJoin} disabled={submitting} label="Join with Google" />
+            <div className="auth-divider">or get a link by email</div>
             <div className="auth-grid">
               <label className="auth-field">
                 <span>Full name</span>
