@@ -207,3 +207,23 @@
   font-weight: 300;
   color: var(--text-secondary);
 }
+
+.checkin-powered {
+  display: block;
+  margin-top: var(--space-xl);
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.checkin-powered:hover {
+  opacity: 1;
+}
+
+.checkin-powered strong {
+  font-weight: 600;
+  color: var(--accent, var(--text-primary));
+}

@@ -146,6 +146,7 @@ export default function CheckIn() {
         <p className="checkin-kicker">{chapter.displayName} Rush</p>
         <h1>{done.created ? "You're checked in!" : "You're already on the board!"}</h1>
         <p className="checkin-done-name">{done.name}</p>
+        <PoweredBy />
       </div>
     );
   }
@@ -207,6 +208,16 @@ export default function CheckIn() {
           {submitting ? 'Checking in...' : 'Check In'}
         </button>
       </form>
+
+      <PoweredBy />
     </div>
+  );
+}
+
+function PoweredBy() {
+  return (
+    <a href="https://rushboard.net" target="_blank" rel="noopener noreferrer" className="checkin-powered">
+      Powered by <strong>RushBoard</strong> — run your chapter&apos;s rush
+    </a>
   );
 }
